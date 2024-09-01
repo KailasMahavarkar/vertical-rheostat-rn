@@ -349,7 +349,7 @@ export default function App({
                 [
                   dyanmmicStyles.tooltipTop,
                   {
-                    minWidth: 16 + (suffix.length * 9) + (String(maxRange).length * 8),
+                    minWidth: 16 + (suffix.length * 8) + (String(maxRange).length * 8),
                   },
                   tooltipPosition === 'right' ? {
                     left: (handleSize / 2) + 32,
@@ -403,7 +403,7 @@ export default function App({
                 [
                   dyanmmicStyles.tooltipTop,
                   {
-                    minWidth: 16 + (suffix.length * 9) + (String(maxRange).length * 8),
+                    minWidth: 16 + (suffix.length * 8) + (String(maxRange).length * 8),
                   },
                   tooltipPosition === 'right' ? {
                     left: (handleSize / 2) + 32,

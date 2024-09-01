@@ -42,7 +42,7 @@ function App(): React.JSX.Element {
                 rheostatHeight={600}
 
                 tooltipPosition="right"
-                suffix=' KW'
+                suffix=' Lakh'
 
                 minRange={minValue}
                 maxRange={maxValue}
