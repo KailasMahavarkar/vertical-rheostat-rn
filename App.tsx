@@ -41,7 +41,7 @@ function App(): React.JSX.Element {
                 rheostatWidth={200}
                 rheostatHeight={600}
 
-                tooltipPosition="right"
+                tooltipPosition="left"
                 suffix=' Lakh'
 
                 minRange={minValue}
