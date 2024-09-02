@@ -52,7 +52,7 @@ function App(): React.JSX.Element {
                 topLabel={<Label value={10} />}
                 bottomLabel={<Label value={100} />}
 
-                shouldSnap={true}
+                shouldSnap={false}
                 snappingPoints={[minValue, 100, 200, 300, 400, 500, 600, 700, 800, 900, maxValue]}
 
                 topValue={topValue}

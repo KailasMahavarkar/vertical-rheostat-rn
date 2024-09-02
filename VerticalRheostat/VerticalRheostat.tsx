@@ -1,65 +1,124 @@
 /* eslint-disable react-native/no-inline-styles */
-import 'react-native-gesture-handler';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import Animated, {
-    runOnJS,
-    useAnimatedStyle,
-    useDerivedValue,
-    useSharedValue,
-} from 'react-native-reanimated';
-import {
-    Gesture,
-    GestureDetector,
-    GestureHandlerRootView,
-} from 'react-native-gesture-handler';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, Text, Animated, PanResponder } from 'react-native';
 import { linearAlgorithm } from './algorithm';
 
-const CONSTANTS = {
-    TRIANGLE_SIZE_X: 6,
-    TRIANGLE_SIZE_Y: 8,
-};
-
-
-const jslog = (...args) => {
-    'worklet';
+function jslog(...args) {
     console.log(JSON.stringify(args, null, 2));
-};
+}
+
+function LabelText({ value, text }) {
+    return (
+        <View
+            style={{
+                borderWidth: 1,
+                borderColor: 'red',
+                width: 200,
+            }}>
+            <Text
+                style={{
+                    color: 'white',
+                    fontSize: 16,
+                    textAlign: 'center',
+                }}
+            >{text} {typeof value === 'number' ? value.toFixed(2) : value}</Text>
+        </View>
+    )
+}
+
+function getClosestIndex(array, target) {
+    let left = 0;
+    let right = array.length - 1;
+
+
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+
+        if (array[mid] === target) {
+            return {
+                index: mid,
+                value: array[mid],
+            };
+        }
+        if (array[mid] < target) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+
+    // If the target is not found, find the closest index
+    const closestIndex =
+        Math.abs(array[left] - target) <
+            Math.abs(array[right] - target)
+            ? left
+            : right;
+    return {
+        index: closestIndex,
+        value: array[closestIndex],
+    };
+}
+
+
 
 export default function App({
-    shouldSnap = false,
-    handleDelta = 0,
-    snappingPoints = [],
+    topValue = 0,
+    bottomValue = 0,
     minRange = 0,
     maxRange = 800,
     handleSize = 50,
+    algorithm = linearAlgorithm,
     rheostatWidth = 200,
+    snappingPoints = [],
     rheostatHeight = 600,
     tooltipPosition = 'left',
-    topLabel = '',
-    bottomLabel = '',
-    suffix = '',
-    topValue = 50,
-    bottomValue = 50,
-    algorithm = linearAlgorithm,
+
+    handleDelta = 20,
+
+    shouldSnap = false,
 }) {
     const rheostatSize = rheostatHeight - handleSize;
+    // Animated.Value to track the current position of the handle
+    const animatedOffsetTop = useRef(new Animated.Value(0)).current;
+    const animatedOffsetBottom = useRef(new Animated.Value(0)).current;
 
-    const animatedOffsetTop = useSharedValue<number>(0);
-    const animatedLastOffsetTop = useSharedValue<number>(0);
-    const animatedOffsetBottom = useSharedValue<number>(0);
-    const animatedLastOffsetBottom = useSharedValue<number>(0);
-    const [currentPositionTop, setCurrentPositionTop] = useState<number>(maxRange);
-    const [currentPositionBottom, setCurrentPositionBottom] = useState<number>(0);
+    const lastOffsetTop = useRef(0);
+    const lastOffsetBottom = useRef(0);
 
+    const [currentTopValue, setCurrentTopValue] = useState(topValue);
+    const [currentBottomValue, setCurrentBottomValue] = useState(bottomValue);
     const snappingPercentageArray = snappingPoints.map(point => algorithm.getPosition(point, minRange, maxRange));
-    const lastInteractedPan = useSharedValue<string>('top');
 
-    const filledBarPercentage = useDerivedValue(() => {
-        const topFilled = (animatedOffsetTop.value / rheostatSize) * 100;
-        const bottomFilled = (-animatedOffsetBottom.value / rheostatSize) * 100;
-        return 100 - (topFilled + bottomFilled);
-    }, [animatedOffsetTop.value, animatedOffsetBottom.value]);
+    const [filledBarPercentage, setFilledPercentageValue] = useState(0);
+    // const [filledBarSize, setFilledBarSize] = useState(0);
+
+    useEffect(() => {
+        // get value of animatedOffsetTop
+        const topOffset = animatedOffsetTop.__getValue();
+        const bottomOffset = animatedOffsetBottom.__getValue();
+
+
+        const topFilled = (topOffset / rheostatSize) * 100;
+        const bottomFilled = (-bottomOffset / rheostatSize) * 100;
+        setFilledPercentageValue(100 - (topFilled + bottomFilled));
+    }, [currentTopValue, currentBottomValue]);
+
+
+    useEffect(() => {
+        const percentage = algorithm.getPosition(bottomValue, minRange, maxRange);
+        const offsetFromTop = (percentage * rheostatSize) / 100;
+        animatedOffsetBottom.setValue(-offsetFromTop);
+        lastOffsetBottom.current = -offsetFromTop;
+        setCurrentBottomValue((percentage * maxRange) / 100);
+    }, [bottomValue]);
+
+    useEffect(() => {
+        const percentage = algorithm.getPosition(topValue, minRange, maxRange);
+        const offsetFromTop = (percentage * rheostatSize) / 100;
+        animatedOffsetTop.setValue(rheostatSize - offsetFromTop);
+        lastOffsetTop.current = rheostatSize - offsetFromTop;
+        setCurrentTopValue(maxRange - (percentage * maxRange) / 100);
+    }, [topValue]);
 
     function offsetToPercentage(offset) {
         'worklet';
@@ -76,403 +135,197 @@ export default function App({
         return (rheostatSize * percent) / 100;
     }
 
-    useEffect(() => {
-        const percentage = algorithm.getPosition(bottomValue, minRange, maxRange);
-        const offsetFromTop = (percentage * rheostatSize) / 100;
-        animatedOffsetBottom.value = -offsetFromTop;
-        animatedLastOffsetBottom.value = -offsetFromTop;
+    const createPanResponder = (panType = 'top') => {
+        return PanResponder.create({
+            onStartShouldSetPanResponder: () => true, // Respond to touch events
+            onMoveShouldSetPanResponder: () => true,  // Continue responding when moving
 
-        setCurrentPositionBottom((percentage * maxRange) / 100);
-    }, [bottomValue]);
+            onPanResponderMove: (event, gestureState) => {
 
-
-    useEffect(() => {
-        const percentage = algorithm.getPosition(topValue, minRange, maxRange);
-        const offsetFromTop = (percentage * rheostatSize) / 100;
-        animatedOffsetTop.value = rheostatSize - offsetFromTop;
-        animatedLastOffsetTop.value = rheostatSize - offsetFromTop;
-
-        setCurrentPositionTop(maxRange - (percentage * maxRange) / 100);
-    }, [topValue]);
-
-    const getPan = (panType) => Gesture.Pan()
-        .onBegin(() => { })
-        .onChange((event) => {
-            lastInteractedPan.value = panType;
-
-            function getClosestIndex(array, target) {
-                let left = 0;
-                let right = array.length - 1;
-
-
-                while (left <= right) {
-                    const mid = Math.floor((left + right) / 2);
-
-                    if (array[mid] === target) {
-                        return {
-                            index: mid,
-                            value: array[mid],
-                        };
-                    }
-                    if (array[mid] < target) {
-                        left = mid + 1;
-                    } else {
-                        right = mid - 1;
-                    }
-                }
-
-                // If the target is not found, find the closest index
-                const closestIndex =
-                    Math.abs(array[left] - target) <
-                        Math.abs(array[right] - target)
-                        ? left
-                        : right;
-                return {
-                    index: closestIndex,
-                    value: array[closestIndex],
-                };
-            }
-
-            // handle movement
-            if (panType === 'top') {
-                const newOffset = event.translationY + animatedLastOffsetTop.value;
-                const clampOffset = clampWithinRange(newOffset, 0, rheostatSize);
-                animatedOffsetTop.value = clampOffset;
-            } else {
-                const newOffset = event.translationY + animatedLastOffsetBottom.value;
-                const clampOffset = clampWithinRange(newOffset, -rheostatSize, 0);
-                animatedOffsetBottom.value = clampOffset;
-            }
-
-            if (shouldSnap) {
-                const topHandlePercentage = offsetToPercentage(animatedOffsetTop.value);
-                const bottomHandlePercentage = offsetToPercentage(-animatedOffsetBottom.value);
-                const closestBottomIndex = getClosestIndex(
-                    snappingPercentageArray,
-                    bottomHandlePercentage,
-                );
-
-                const closestTopIndex = getClosestIndex(
-                    snappingPercentageArray,
-                    100 - topHandlePercentage,
-                );
+                // handle movement
                 if (panType === 'top') {
-                    const clampIndex = Math.max(closestBottomIndex.index + 1, closestTopIndex.index);
-                    const offset = percentToRheostatSize(snappingPercentageArray[clampIndex]);
-                    runOnJS(setCurrentPositionTop)(snappingPoints[clampIndex]);
-                    animatedOffsetTop.value = rheostatSize - offset;
+                    const newOffset = lastOffsetTop.current + gestureState.dy;
+                    const clampOffset = clampWithinRange(newOffset, 0, rheostatSize);
+                    animatedOffsetTop.setValue(clampOffset);
                 } else {
-                    const clampIndex = Math.min(closestTopIndex.index - 1, closestBottomIndex.index);
-                    const offset = percentToRheostatSize(snappingPercentageArray[clampIndex]);
-                    runOnJS(setCurrentPositionBottom)(snappingPoints[clampIndex]);
-                    animatedOffsetBottom.value = -1 * offset;
+                    const newOffset = lastOffsetBottom.current + gestureState.dy;
+                    const clampOffset = clampWithinRange(newOffset, -rheostatSize, 0);
+                    animatedOffsetBottom.setValue(clampOffset);
                 }
-            }
 
-            if (!shouldSnap) {
-                const isOverlapping = (animatedOffsetTop.value + (-animatedOffsetBottom.value) + handleDelta > rheostatSize);
-                if (panType === 'top') {
-                    if (isOverlapping) {
-                        animatedOffsetTop.value = (rheostatSize - (-animatedOffsetBottom.value)) - handleDelta;
+                // get value of animatedOffsetTop
+                const topOffset = animatedOffsetTop.__getValue();
+                const bottomOffset = animatedOffsetBottom.__getValue();
+
+
+                if (shouldSnap) {
+                    const topHandlePercentage = offsetToPercentage(topOffset);
+                    const bottomHandlePercentage = offsetToPercentage(-bottomOffset);
+                    const closestBottomIndex = getClosestIndex(
+                        snappingPercentageArray,
+                        bottomHandlePercentage,
+                    );
+
+                    const closestTopIndex = getClosestIndex(
+                        snappingPercentageArray,
+                        100 - topHandlePercentage,
+                    );
+                    if (panType === 'top') {
+                        const clampIndex = Math.max(closestBottomIndex.index + 1, closestTopIndex.index);
+                        const offset = percentToRheostatSize(snappingPercentageArray[clampIndex]);
+                        animatedOffsetTop.setValue(rheostatSize - offset);
+                        setCurrentTopValue(snappingPoints[clampIndex]);
                     } else {
-                        const newOffset = event.translationY + animatedLastOffsetTop.value;
-                        const percentageFilled = (newOffset / rheostatSize) * 100;
-                        const value = algorithm.getValue(percentageFilled, minRange, maxRange);
-                        runOnJS(setCurrentPositionTop)(maxRange - clampWithinRange(value, minRange, maxRange));
-                    }
-                } else {
-                    if (isOverlapping) {
-                        animatedOffsetBottom.value = -1 * ((rheostatSize - animatedOffsetTop.value) - handleDelta);
-                    } else {
-                        const newOffset = event.translationY + animatedLastOffsetBottom.value;
-                        const percentageFilled = (newOffset / rheostatSize) * 100;
-                        const value = algorithm.getValue(-percentageFilled, minRange, maxRange);
-                        runOnJS(setCurrentPositionBottom)(clampWithinRange(value, minRange, maxRange));
+                        const clampIndex = Math.min(closestTopIndex.index - 1, closestBottomIndex.index);
+                        const offset = percentToRheostatSize(snappingPercentageArray[clampIndex]);
+                        animatedOffsetBottom.setValue(-1 * offset);
+                        setCurrentBottomValue(snappingPoints[clampIndex]);
                     }
                 }
-            }
-        })
-        .onFinalize(() => {
-            if (panType === 'top') {
-                animatedLastOffsetTop.value = clampWithinRange(animatedOffsetTop.value, 0, rheostatSize);
-            } else {
-                animatedLastOffsetBottom.value = clampWithinRange(animatedOffsetBottom.value, -rheostatSize, 0);
-            }
+
+
+                if (!shouldSnap) {
+                    const isOverlapping = topOffset + (-bottomOffset) + handleDelta > rheostatSize;
+                    if (panType === 'top') {
+                        if (isOverlapping) {
+                            animatedOffsetTop.setValue((rheostatSize - (-bottomOffset)) - handleDelta);
+                        } else {
+                            const newOffset = lastOffsetTop.current + gestureState.dy;
+                            const percentageFilled = (newOffset / rheostatSize) * 100;
+                            const value = algorithm.getValue(percentageFilled, minRange, maxRange);
+                            setCurrentTopValue((maxRange - clampWithinRange(value, minRange, maxRange)));
+                        }
+                    } else {
+                        if (isOverlapping) {
+                            animatedOffsetBottom.setValue(-1 * ((rheostatSize - topOffset) - handleDelta));
+                        } else {
+                            const newOffset = lastOffsetBottom.current + gestureState.dy;
+                            const percentageFilled = (newOffset / rheostatSize) * 100;
+                            const value = algorithm.getValue(-percentageFilled, minRange, maxRange);
+                            setCurrentBottomValue(clampWithinRange(value, minRange, maxRange));
+                        }
+                    }
+                }
+
+            },
+            onPanResponderRelease: (event, gestureState) => {
+                if (panType === 'top') {
+                    lastOffsetTop.current += gestureState.dy;
+                } else {
+                    lastOffsetBottom.current += gestureState.dy;
+                }
+            },
         });
+    };
 
-    const panTop = getPan('top');
-    const panBottom = getPan('bottom');
+    // Create a pan responder to handle gestures
+    const panResponderTop = useRef(createPanResponder('top')).current;
+    const panResponderBottom = useRef(createPanResponder('bottom')).current;
 
-    const animatedStylesTop = useAnimatedStyle(() => ({
-        transform: [
-            { translateY: animatedOffsetTop.value },
-        ],
-    }));
-
-    const animatedStylesBottom = useAnimatedStyle(() => ({
-        transform: [
-            { translateY: animatedOffsetBottom.value },
-        ],
-    }));
-
-    const animatedFilledBar = useAnimatedStyle(() => {
-        const value = percentToRheostatSize(filledBarPercentage.value);
-
-        return {
-            position: 'absolute',
-            top: animatedOffsetTop.value,
-            height: value,
-            backgroundColor: '#00857a',
-            borderRadius: 3,
-            width: 4,
-        };
-    });
-
-    const dyanmmicStyles = StyleSheet.create({
-        label: {
-            alignItems: 'center',
-            textAlign: 'center',
-            width: rheostatWidth,
-        },
-        handleBottom: {
-            backgroundColor: '#00857a',
-            alignItems: 'center',
-            justifyContent: 'center',
-            top: 0,
-            borderRadius: 3,
-            zIndex: 1,
-            left: handleSize + suffix.length * 4 + 16,
-            width: handleSize,
-            height: handleSize,
-        },
-        tooltipTop: {
-            backgroundColor: '#00857a',
-            alignItems: 'center',
-            justifyContent: 'center',
-            top: 0,
-            borderRadius: 3,
-            height: handleSize,
-            position: 'absolute',
-        },
-    });
+    const filledBarSize = (filledBarPercentage * rheostatSize) / 100;
 
 
     return (
-        <GestureHandlerRootView
-            style={styles.container}
-        >
-            {/* filled bar */}
-            <View
-                style={[
-                    {
-                        height: rheostatSize,
-                    },
-                    styles.filledBar,
-                ]}
-            />
+        <View>
 
-            {/* top label */}
-            {topLabel && <View style={dyanmmicStyles.label}>{topLabel}</View>}
-
-            {/* vertical rheostat */}
             <View style={{
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexDirection: 'column',
-                width: 200,
-                height: 600,
+                position: 'absolute',
+                height: rheostatHeight - handleSize,
+                width: rheostatWidth,
+                top: handleSize / 2,
             }}>
-                <Animated.View style={[animatedFilledBar]} />
-                <View style={{
-                    position: 'absolute',
-                    height: rheostatSize,
-                    top: handleSize / 2,
-                }}>
-                    {
-                        snappingPercentageArray.map((percentage, index) => {
-                            const width = 5 + ((percentage * 15) / 100);
-                            return (
-                                <View
-                                    key={index}
-                                    style={[{
-                                        position: 'absolute',
-                                        width: width,
-                                        height: 2,
-                                        backgroundColor: 'white',
-                                        top: `${100 - percentage}%`,
-
-                                    }, tooltipPosition === 'left' ? {
-                                        left: (handleSize / 2) + 8,
-                                    } : {
-                                        right: (handleSize / 2) + 8,
-                                    }]}
-                                />
-                            );
-                        })
-                    }
-                </View>
-
-                <GestureDetector gesture={panTop}>
-                    <Animated.View
-                        style={[
-                            {
-                                width: handleSize,
-                                height: handleSize,
-                                zIndex: lastInteractedPan.value === 'top' ? 1 : 0,
-                            },
-                            styles.circle,
-                            animatedStylesTop,
-                        ]}
-                    >
-                        <Animated.View
-                            style={
-                                [
-                                    dyanmmicStyles.tooltipTop,
-                                    {
-                                        minWidth: 16 + (suffix.length * 8) + (String(maxRange).length * 8),
-                                    },
-                                    tooltipPosition === 'right' ? {
-                                        left: (handleSize / 2) + 32,
-                                    } : {
-                                        right: (handleSize / 2) + 32,
-                                    },
-                                ]
-                            }
-                        >
-                            <Text style={styles.labelText}>
-                                {`${Math.round(currentPositionTop)} ${suffix}`}
-                            </Text>
-
+                {
+                    snappingPercentageArray.map((percentage, index) => {
+                        const width = 5 + ((percentage * 15) / 100);
+                        return (
                             <View
-                                style={[
-                                    styles.triangleLeft,
-                                    tooltipPosition === 'right' ? {
-                                        left: -CONSTANTS.TRIANGLE_SIZE_Y,
-                                    } : {
-                                        right: -CONSTANTS.TRIANGLE_SIZE_Y,
-                                        transform: [
-                                            {
-                                                rotate: '180deg',
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            />
-                        </Animated.View>
-                    </Animated.View>
-                </GestureDetector>
+                                key={index}
+                                style={[{
+                                    position: 'absolute',
+                                    width: width,
+                                    height: 2,
+                                    backgroundColor: 'white',
+                                    top: `${100 - percentage}%`,
 
-                <GestureDetector gesture={panBottom}>
-                    <Animated.View
-                        style={[
-                            {
-                                width: handleSize,
-                                height: handleSize,
-                                zIndex: lastInteractedPan.value === 'bottom' ? 1 : 0,
-                            },
-                            styles.circle,
-                            animatedStylesBottom,
-                        ]}
-                    >
-
-                        <Animated.View
-                            style={
-                                [
-                                    dyanmmicStyles.tooltipTop,
-                                    {
-                                        minWidth: 16 + (suffix.length * 8) + (String(maxRange).length * 8),
-                                    },
-                                    tooltipPosition === 'right' ? {
-                                        left: (handleSize / 2) + 32,
-                                    } : {
-                                        right: (handleSize / 2) + 32,
-                                    },
-                                ]
-                            }
-                        >
-                            <Text style={styles.labelText}>
-                                {`${Math.round(currentPositionBottom)} ${suffix}`}
-                            </Text>
-                            <View
-                                style={[
-                                    styles.triangleLeft,
-                                    tooltipPosition === 'right' ? {
-                                        left: -CONSTANTS.TRIANGLE_SIZE_Y,
-                                    } : {
-                                        right: -CONSTANTS.TRIANGLE_SIZE_Y,
-                                        transform: [
-                                            {
-                                                rotate: '180deg',
-                                            },
-                                        ],
-                                    },
-                                ]}
+                                },
+                                tooltipPosition === 'left' ? {
+                                    left: (handleSize / 2) + 8,
+                                } : {
+                                    right: (handleSize / 2) + 8,
+                                }]}
                             />
-                        </Animated.View>
-                    </Animated.View>
-                </GestureDetector>
+                        );
+                    })
+                }
             </View>
 
-            {/* bottom label */}
-            {
-                bottomLabel && (
-                    <View style={dyanmmicStyles.label}>{bottomLabel}</View>
-                )
-            }
+            <View
+                style={{
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                    width: 200,
+                    height: 600,
+                    marginBottom: 100,
+                    borderWidth: 1,
+                    borderColor: 'red',
+                }}
+            >
 
-        </GestureHandlerRootView >
+
+
+                <Animated.View
+                    {...panResponderTop.panHandlers} // Attach pan handlers to the animated view
+                    style={[
+                        {
+                            width: handleSize,
+                            height: handleSize,
+                        },
+                        styles.circle,
+                        {
+                            transform: [{ translateY: animatedOffsetTop || 0 }], // Correctly apply transform
+                        },
+                    ]}
+                >
+                    <Animated.View
+                        style={{
+                            width: 4,
+                            position: 'absolute',
+                            // top: (snappingPercentageArray[0] * rheostatSize) / 100,
+                            height: `${filledBarPercentage}%`,
+                            backgroundColor: '#00857a',
+                            borderRadius: 3,
+                        }}
+                    />
+                </Animated.View>
+
+                <Animated.View
+                    {...panResponderBottom.panHandlers} // Attach pan handlers to the animated view
+                    style={[
+                        {
+                            width: handleSize,
+                            height: handleSize,
+                        },
+                        styles.circle,
+                        {
+                            backgroundColor: 'red',
+                        },
+                        {
+                            transform: [{ translateY: animatedOffsetBottom || 0 }], // Correctly apply transform
+                        },
+                    ]}
+                />
+            </View>
+            <LabelText text="top" value={currentTopValue} />
+            <LabelText text="bot" value={currentBottomValue} />
+
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-    },
     circle: {
         borderRadius: 500,
         backgroundColor: '#00857a',
     },
-    triangleLeft: {
-        borderTopWidth: CONSTANTS.TRIANGLE_SIZE_X,
-        borderBottomWidth: CONSTANTS.TRIANGLE_SIZE_X,
-        borderRightWidth: CONSTANTS.TRIANGLE_SIZE_Y,
-        borderLeftWidth: 0,
-        borderTopColor: 'transparent',
-        borderBottomColor: 'transparent',
-        borderLeftColor: '#00857a',
-        borderRightColor: '#00857a',
-        position: 'absolute',
-    },
-    traingleRight: {
-        borderTopWidth: CONSTANTS.TRIANGLE_SIZE_X,
-        borderBottomWidth: CONSTANTS.TRIANGLE_SIZE_X,
-        borderLeftWidth: CONSTANTS.TRIANGLE_SIZE_Y,
-        borderRightWidth: 0,
-        borderTopColor: 'transparent',
-        borderBottomColor: 'transparent',
-        borderLeftColor: '#00857a',
-        borderRightColor: '#00857a',
-        position: 'absolute',
-    },
-    filledBar: {
-        width: 4,
-        position: 'absolute',
-        backgroundColor: '#b5b5b5',
-        borderRadius: 3,
-    },
-    transparentText: {
-        color: 'transparent',
-    },
-
-    labelText: {
-        flexDirection: 'row',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        color: 'white',
-        fontSize: 13,
-    }
-
 });
