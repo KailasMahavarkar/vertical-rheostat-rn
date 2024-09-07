@@ -1,13 +1,15 @@
 /* eslint-disable react-native/no-inline-styles */
-import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, useColorScheme, View, Text, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { SafeAreaView, View, Text, Pressable } from 'react-native';
 import VerticalRheostat from './VerticalRheostat/VerticalRheostat';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
+import VerticalRheostatClassBased from './VerticalRheostat/VerticalRheostatClassBased';
 import { linearAlgorithm, log10Algorithm } from './VerticalRheostat/algorithm';
 
-function App(): React.JSX.Element {
-    const isDarkMode = useColorScheme() === 'dark';
+function Label({ value }) {
+    return <Text style={{ color: 'white', fontSize: 16 }}>{value}</Text>;
+}
 
+function App(): React.JSX.Element {
     const maxValue = 1000;
     const minValue = 0;
 
@@ -18,10 +20,6 @@ function App(): React.JSX.Element {
     const backgroundStyle = {
         backgroundColor: 'black'
     };
-
-    function Label({ value }) {
-        return <Text style={{ color: 'white', fontSize: 16 }}>{value}</Text>;
-    }
 
     return <SafeAreaView style={backgroundStyle} >
         <View
@@ -35,9 +33,9 @@ function App(): React.JSX.Element {
                 borderStyle: 'solid',
             }}
         >
-            <VerticalRheostat
-                handleSize={30}
-                handleDelta={30}
+            <VerticalRheostatClassBased
+                handleSize={60}
+                handleDelta={0}
                 rheostatWidth={200}
                 rheostatHeight={600}
 
@@ -52,11 +50,11 @@ function App(): React.JSX.Element {
                 topLabel={<Label value={10} />}
                 bottomLabel={<Label value={100} />}
 
-                shouldSnap={false}
+                shouldSnap={true}
                 snappingPoints={[minValue, 100, 200, 300, 400, 500, 600, 700, 800, 900, maxValue]}
 
-                topValue={topValue}
-                bottomValue={bottomValue}
+                topHandleValue={topValue}
+                bottomHandleValue={bottomValue}
             />
 
             <Pressable
