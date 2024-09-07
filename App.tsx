@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { SafeAreaView, View, Text, Pressable } from 'react-native';
 import VerticalRheostat from './VerticalRheostat/VerticalRheostat';
-import VerticalRheostatClassBased from './VerticalRheostat/VerticalRheostatClassBased';
 import { linearAlgorithm, log10Algorithm } from './VerticalRheostat/algorithm';
 
 function Label({ value }) {
@@ -33,7 +32,7 @@ function App(): React.JSX.Element {
                 borderStyle: 'solid',
             }}
         >
-            <VerticalRheostatClassBased
+            <VerticalRheostat
                 handleSize={60}
                 handleDelta={0}
                 rheostatWidth={200}
