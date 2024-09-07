@@ -169,6 +169,11 @@ function VerticalRheostat({
         animatedOffsetBottom.setValue(-offsetFromTop);
         lastOffsetBottom.current = -offsetFromTop;
         setCurrentBottomValue((percentage * maxRange) / 100);
+
+        // re-calculate the filled bar height
+        const { barFilledPercent } = getValues();
+        setFilledBarHeight(percentToRheostatSize(barFilledPercent));
+
     }, [bottomHandleValue]);
 
     useEffect(() => {
@@ -177,6 +182,10 @@ function VerticalRheostat({
         animatedOffsetTop.setValue(rheostatSize - offsetFromTop);
         lastOffsetTop.current = rheostatSize - offsetFromTop;
         setCurrentTopValue(maxRange - (percentage * maxRange) / 100);
+
+        // re-calculate the filled bar height
+        const { barFilledPercent } = getValues();
+        setFilledBarHeight(percentToRheostatSize(barFilledPercent));
     }, [topHandleValue]);
 
     useEffect(() => {
