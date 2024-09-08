@@ -357,9 +357,7 @@ function VerticalRheostat({
                             height: handleSize,
                         },
                         styles.circle,
-                        {
-                            backgroundColor: 'red',
-                        },
+                      
                         {
                             transform: [
                                 { translateY: animatedOffsetBottom || 0 },
