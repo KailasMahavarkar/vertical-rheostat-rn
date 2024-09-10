@@ -1,12 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Animated, PanResponder } from 'react-native';
 import { linearAlgorithm } from './algorithm';
+import { jslog, clampRange, offsetToPercentage, percentToRheostatSize, offsetToRheostatSize } from './utils';
 
-function jslog(...args) {
-    console.log(JSON.stringify(args, null, 2));
-}
+const CONSTANTS = {
+    TRIANGLE_SIZE_X: 6,
+    TRIANGLE_SIZE_Y: 8,
+};
+
 
 function LabelText({ value, text }) {
+
     return (
         <View
             style={{
@@ -64,7 +68,85 @@ const styles = StyleSheet.create({
         borderRadius: 500,
         backgroundColor: '#00857a',
     },
+
+    handleWrapper: {
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexDirection: 'column',
+        width: 200,
+        height: 600,
+        borderWidth: 1,
+        borderColor: 'red',
+    }
 });
+
+
+function ToolTip({ value, handleSize, tooltipPosition, maxRange }) {
+    const dynamicStyles = StyleSheet.create({
+        triangleLeft: {
+            borderTopWidth: CONSTANTS.TRIANGLE_SIZE_X,
+            borderBottomWidth: CONSTANTS.TRIANGLE_SIZE_X,
+            borderRightWidth: CONSTANTS.TRIANGLE_SIZE_Y,
+            borderLeftWidth: 0,
+            borderTopColor: 'transparent',
+            borderBottomColor: 'transparent',
+            borderLeftColor: '#00857a',
+            borderRightColor: '#00857a',
+            position: 'absolute',
+        },
+        traingleRight: {
+            borderTopWidth: CONSTANTS.TRIANGLE_SIZE_X,
+            borderBottomWidth: CONSTANTS.TRIANGLE_SIZE_X,
+            borderLeftWidth: CONSTANTS.TRIANGLE_SIZE_Y,
+            borderRightWidth: 0,
+            borderTopColor: 'transparent',
+            borderBottomColor: 'transparent',
+            borderLeftColor: '#00857a',
+            borderRightColor: '#00857a',
+            position: 'absolute',
+        },
+    })
+
+
+    return (
+        <View
+            style={[{
+                position: 'absolute',
+                width: 100,
+                height: handleSize,
+                backgroundColor: 'red',
+                justifyContent: 'center',
+                alignItems: 'center',
+            },
+            tooltipPosition === 'right'
+                ? { left: handleSize + 16 }
+                : { right: handleSize + 16 }
+            ]}
+        >
+            <View
+                style={[
+                    dynamicStyles.triangleLeft,
+                    tooltipPosition === 'right' ? {
+                        left: -CONSTANTS.TRIANGLE_SIZE_Y,
+                    } : {
+                        right: -CONSTANTS.TRIANGLE_SIZE_Y,
+                        transform: [
+                            {
+                                rotate: '180deg',
+                            },
+                        ],
+                    },
+                ]}
+            />
+
+            <Text style={{ color: 'white' }}>
+                {value}
+            </Text>
+        </View>
+    );
+}
+
+
 
 function VerticalRheostat({
     topHandleValue = 0,
@@ -77,7 +159,7 @@ function VerticalRheostat({
     snappingPoints = [],
     rheostatHeight = 600,
     tooltipPosition = 'left',
-
+    showSnapLines = false,
     handleDelta = 20,
     shouldSnap = false,
 }) {
@@ -95,27 +177,11 @@ function VerticalRheostat({
     );
     const [filledBarHeight, setFilledBarHeight] = useState(0);
 
-    // Convert the offset(distance) to a percentage
-    const offsetToPercentage = offset =>
-        (Math.abs(offset) / rheostatSize) * 100;
-
-    // Convert the percentage to a rheostat size
-    const percentToRheostatSize = percent =>
-        Math.max(0, (rheostatSize * percent) / 100);
-
-    // Clamp the value between the min and max
-    const clampRange = (value, min, max) => Math.min(Math.max(value, min), max);
-
-    // Convert the offset to a rheostat size
-    const offsetToRheostatSize = offset => {
-        return percentToRheostatSize(offsetToPercentage(offset));
-    }
-
-    function getValues() {
+    const getValues = useCallback(() => {
         const topOffset = animatedOffsetTop.__getValue();
         const bottomOffset = animatedOffsetBottom.__getValue();
-        const topFilledPercent = offsetToPercentage(topOffset);
-        const bottomFilledPercent = offsetToPercentage(bottomOffset);
+        const topFilledPercent = offsetToPercentage(rheostatSize, topOffset);
+        const bottomFilledPercent = offsetToPercentage(rheostatSize, bottomOffset);
         const topValue =
             maxRange - (topFilledPercent * maxRange) / 100;
         const bottomValue = (bottomFilledPercent * maxRange) / 100;
@@ -133,23 +199,89 @@ function VerticalRheostat({
             bottomFilledPercent,
             barFilledPercent,
         };
-    }
+    }, [animatedOffsetTop, animatedOffsetBottom, rheostatSize, maxRange]);
 
-    function getClampOffsetTop(offset) {
+    const getClampOffsetTop = useCallback((offset) => {
         const { bottomOffset } = getValues();
         const clampOffset = clampRange(offset, 0, rheostatSize + bottomOffset - handleDelta);
         return clampOffset;
-    }
+    }, [getValues, handleDelta, rheostatSize]);
 
-    function getClampOffsetBottom(offset) {
+    const getClampOffsetBottom = useCallback((offset) => {
         const { topOffset } = getValues();
         const positiveOffset = Math.abs(offset);
         const maxDelta = rheostatSize - topOffset - handleDelta;
         const clampOffset = clampRange(positiveOffset, 0, maxDelta);
         return clampOffset;
+    }, [getValues, handleDelta, rheostatSize]);
+
+    function onPanMove(panType, event, gestureState) {
+        let deltaTop;
+        let deltaBottom;
+        let clampOffsetTop;
+        let clampOffsetBottom;
+
+        // set the offset based on the pan type (top or bottom) and apply boundary checks
+        if (panType === 'top') {
+            deltaTop = lastOffsetTop.current + gestureState.dy;
+            clampOffsetTop = clampRange(deltaTop, 0, rheostatSize);
+            animatedOffsetTop.setValue(clampOffsetTop);
+        } else {
+            deltaBottom = lastOffsetBottom.current + gestureState.dy;
+            clampOffsetBottom = clampRange(
+                deltaBottom,
+                -rheostatSize,
+                0
+            );
+            animatedOffsetBottom.setValue(clampOffsetBottom);
+        }
+
+        const { topOffset, bottomOffset } = getValues();
+
+        if (shouldSnap) {
+            const topHandlePercentage = offsetToPercentage(rheostatSize, topOffset);
+            const bottomHandlePercentage = offsetToPercentage(rheostatSize, -bottomOffset);
+            const closestBottomIndex = getClosestIndex(
+                snappingPercentageArray,
+                bottomHandlePercentage,
+            );
+
+            const closestTopIndex = getClosestIndex(
+                snappingPercentageArray,
+                100 - topHandlePercentage,
+            );
+            if (panType === 'top') {
+                const clampIndex = Math.max(closestBottomIndex.index + 1, closestTopIndex.index);
+                const offset = percentToRheostatSize(rheostatSize, snappingPercentageArray[clampIndex]);
+                animatedOffsetTop.setValue(rheostatSize - offset);
+                setCurrentTopValue(snappingPoints[clampIndex]);
+            } else {
+                const clampIndex = Math.min(closestTopIndex.index - 1, closestBottomIndex.index);
+                const offset = percentToRheostatSize(rheostatSize, snappingPercentageArray[clampIndex]);
+                animatedOffsetBottom.setValue(-1 * offset);
+                setCurrentBottomValue(snappingPoints[clampIndex]);
+            }
+        } else {
+            // clmap the offset to handle overlapping (top should not overlap bottom and vice versa)
+            if (panType === 'top') {
+                const newOffset = offsetToRheostatSize(rheostatSize, getClampOffsetTop(topOffset));
+                const percentage = offsetToPercentage(rheostatSize, newOffset);
+                const value = maxRange - (percentage * maxRange) / 100;
+                setCurrentTopValue(value);
+                animatedOffsetTop.setValue(newOffset);
+            } else {
+                const newOffset = -offsetToRheostatSize(rheostatSize, getClampOffsetBottom(bottomOffset));
+                const percentage = offsetToPercentage(rheostatSize, newOffset);
+                const value = (percentage * maxRange) / 100;
+                setCurrentBottomValue(value);
+                animatedOffsetBottom.setValue(newOffset);
+            }
+        }
+        const { barFilledPercent } = getValues();
+        setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
     }
 
-    function onPanEnd(panType, gestureState) {
+    function onPanEnd(panType, event, gestureState) {
         if (panType === 'top') {
             const clampOffset = getClampOffsetTop(lastOffsetTop.current + gestureState.dy);
             lastOffsetTop.current = clampOffset;
@@ -158,6 +290,12 @@ function VerticalRheostat({
             lastOffsetBottom.current = -clampOffset;
         }
     }
+
+    // calculate the filled bar height on initial render
+    useEffect(() => {
+        const { barFilledPercent } = getValues();
+        setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
+    }, []);
 
     useEffect(() => {
         const percentage = algorithm.getPosition(
@@ -168,207 +306,132 @@ function VerticalRheostat({
         const offsetFromTop = (percentage * rheostatSize) / 100;
         animatedOffsetBottom.setValue(-offsetFromTop);
         lastOffsetBottom.current = -offsetFromTop;
-        setCurrentBottomValue((percentage * maxRange) / 100);
+        setCurrentBottomValue(bottomHandleValue);
 
         // re-calculate the filled bar height
         const { barFilledPercent } = getValues();
-        setFilledBarHeight(percentToRheostatSize(barFilledPercent));
-
+        setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
     }, [bottomHandleValue]);
 
     useEffect(() => {
         const percentage = algorithm.getPosition(topHandleValue, minRange, maxRange);
-        const offsetFromTop = (percentage * rheostatSize) / 100;
-        animatedOffsetTop.setValue(rheostatSize - offsetFromTop);
-        lastOffsetTop.current = rheostatSize - offsetFromTop;
-        setCurrentTopValue(maxRange - (percentage * maxRange) / 100);
+        const offsetFromTop = rheostatSize - ((percentage * rheostatSize) / 100);
+        animatedOffsetTop.setValue(offsetFromTop);
+        lastOffsetTop.current = offsetFromTop;
+        setCurrentTopValue(topHandleValue);
 
-        // re-calculate the filled bar height
+        // // re-calculate the filled bar height
         const { barFilledPercent } = getValues();
-        setFilledBarHeight(percentToRheostatSize(barFilledPercent));
+        setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
     }, [topHandleValue]);
-
-    useEffect(() => {
-        const { barFilledPercent } = getValues();
-        setFilledBarHeight(percentToRheostatSize(barFilledPercent));
-    }, [])
 
 
     const createPanResponder = (panType = 'top') =>
         PanResponder.create({
             onStartShouldSetPanResponder: () => true, // Respond to touch events
             onMoveShouldSetPanResponder: () => true, // Continue responding when moving
-            onPanResponderMove: (event, gestureState) => {
-                let deltaTop;
-                let deltaBottom;
-                let clampOffsetTop;
-                let clampOffsetBottom;
-
-                // set the offset based on the pan type (top or bottom) and apply boundary checks
-                if (panType === 'top') {
-                    deltaTop = lastOffsetTop.current + gestureState.dy;
-                    clampOffsetTop = clampRange(deltaTop, 0, rheostatSize);
-                    animatedOffsetTop.setValue(clampOffsetTop);
-                } else {
-                    deltaBottom = lastOffsetBottom.current + gestureState.dy;
-                    clampOffsetBottom = clampRange(
-                        deltaBottom,
-                        -rheostatSize,
-                        0
-                    );
-                    animatedOffsetBottom.setValue(clampOffsetBottom);
-                }
-
-                const { topOffset, bottomOffset } = getValues();
-
-                if (shouldSnap) {
-                    const topHandlePercentage = offsetToPercentage(topOffset);
-                    const bottomHandlePercentage = offsetToPercentage(-bottomOffset);
-                    const closestBottomIndex = getClosestIndex(
-                        snappingPercentageArray,
-                        bottomHandlePercentage,
-                    );
-
-                    const closestTopIndex = getClosestIndex(
-                        snappingPercentageArray,
-                        100 - topHandlePercentage,
-                    );
-                    if (panType === 'top') {
-                        const clampIndex = Math.max(closestBottomIndex.index + 1, closestTopIndex.index);
-                        const offset = percentToRheostatSize(snappingPercentageArray[clampIndex]);
-                        animatedOffsetTop.setValue(rheostatSize - offset);
-                        setCurrentTopValue(snappingPoints[clampIndex]);
-                    } else {
-                        const clampIndex = Math.min(closestTopIndex.index - 1, closestBottomIndex.index);
-                        const offset = percentToRheostatSize(snappingPercentageArray[clampIndex]);
-                        animatedOffsetBottom.setValue(-1 * offset);
-                        setCurrentBottomValue(snappingPoints[clampIndex]);
-                    }
-                } else {
-                    // clmap the offset to handle overlapping (top should not overlap bottom and vice versa)
-                    if (panType === 'top') {
-                        const newOffset = offsetToRheostatSize(getClampOffsetTop(topOffset));
-                        const percentage = offsetToPercentage(newOffset);
-                        const value = maxRange - (percentage * maxRange) / 100;
-                        setCurrentTopValue(value);
-                        animatedOffsetTop.setValue(newOffset);
-                    } else {
-                        const newOffset = -offsetToRheostatSize(getClampOffsetBottom(bottomOffset));
-                        const percentage = offsetToPercentage(newOffset);
-                        const value = (percentage * maxRange) / 100;
-                        setCurrentBottomValue(value);
-                        animatedOffsetBottom.setValue(newOffset);
-                    }
-                }
-                const { barFilledPercent } = getValues();
-                setFilledBarHeight(percentToRheostatSize(barFilledPercent));
-            },
-            onPanResponderRelease: (event, gestureState) => {
-                onPanEnd(panType, gestureState);
-            },
-            onPanResponderTerminate: (event, gestureState) => {
-                onPanEnd(panType, gestureState);
-            },
+            onPanResponderMove: (event, gestureState) => onPanMove(panType, event, gestureState),
+            onPanResponderRelease: (event, gestureState) => onPanEnd(panType, event, gestureState),
+            onPanResponderTerminate: (event, gestureState) => onPanEnd(panType, event, gestureState),
         });
 
-    // Create a pan responder to handle gestures
     const panResponderTop = useRef(createPanResponder('top')).current;
     const panResponderBottom = useRef(createPanResponder('bottom')).current;
 
+
+    const dynamicStyles = StyleSheet.create({
+        filledBar: {
+            width: 4,
+            height: filledBarHeight,
+            position: 'absolute',
+            left: handleSize / 2 - 2,
+            backgroundColor: '#00857a',
+            borderRadius: 3,
+        },
+        snapBarWrapper: {
+            position: 'absolute',
+            height: rheostatHeight - handleSize,
+            width: rheostatWidth,
+            top: handleSize / 2,
+        },
+    });
+
     return (
         <View>
-            <View
-                style={{
-                    position: 'absolute',
-                    height: rheostatHeight - handleSize,
-                    width: rheostatWidth,
-                    top: handleSize / 2,
-                }}
-            >
-                {snappingPercentageArray.map((percentage, index) => {
-                    const width = 5 + (percentage * 15) / 100;
-                    return (
-                        <View
-                            key={index}
-                            style={[
-                                {
-                                    position: 'absolute',
-                                    width: width,
-                                    height: 2,
-                                    backgroundColor: 'white',
-                                    top: `${100 - percentage}%`,
-                                },
-                                tooltipPosition === 'left'
-                                    ? {
-                                        left: handleSize / 2 + 8,
-                                    }
-                                    : {
-                                        right: handleSize / 2 + 8,
-                                    },
-                            ]}
-                        />
-                    );
-                })}
-            </View>
-
-            <View
-                style={{
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexDirection: 'column',
-                    width: 200,
-                    height: 600,
-                    marginBottom: 100,
-                    borderWidth: 1,
-                    borderColor: 'red',
-                }}
-            >
-                <Animated.View
-                    {...panResponderTop.panHandlers} // Attach pan handlers to the animated view
-                    style={[
-                        {
-                            width: handleSize,
-                            height: handleSize,
-                        },
-                        styles.circle,
-                        {
-                            transform: [{ translateY: animatedOffsetTop || 0 }], // Correctly apply transform
-                        },
-                    ]}
-                >
-                    <Animated.View
-                        renderToHardwareTextureAndroid
-                        style={{
-                            width: 4,
-                            height: filledBarHeight,
-                            position: 'absolute',
-                            left: handleSize / 2 - 2,
-                            backgroundColor: '#00857a',
-                            borderRadius: 3,
-                        }}
-                    />
-                </Animated.View>
-
-                <Animated.View
-                    {...panResponderBottom.panHandlers} // Attach pan handlers to the animated view
-                    style={[
-                        {
-                            width: handleSize,
-                            height: handleSize,
-                        },
-                        styles.circle,
-                      
-                        {
-                            transform: [
-                                { translateY: animatedOffsetBottom || 0 },
-                            ], // Correctly apply transform
-                        },
-                    ]}
-                />
-            </View>
             <LabelText text="top" value={currentTopValue} />
+            <View>
+                {shouldSnap && showSnapLines && (
+                    <View style={dynamicStyles.snapBarWrapper}>
+                        {snappingPercentageArray.map((percentage, index) => {
+                            const width = 5 + (percentage * 15) / 100;
+                            return (
+                                <View
+                                    key={index}
+                                    style={[
+                                        {
+                                            position: 'absolute',
+                                            width: width,
+                                            height: 2,
+                                            backgroundColor: 'white',
+                                        },
+                                        tooltipPosition === 'right'
+                                            ? {
+                                                left: handleSize / 2 + 8,
+                                                top: `${100 - percentage}%`,
+                                            }
+                                            : {
+                                                right: handleSize / 2 + 8,
+                                                top: `${100 - percentage}%`,
+                                            },
+                                    ]}
+                                />
+                            );
+                        })}
+                    </View>
+                )}
+                <View style={styles.handleWrapper}>
+                    <Animated.View
+                        {...panResponderTop.panHandlers}
+                        style={[
+                            styles.circle,
+                            {
+                                width: handleSize,
+                                height: handleSize,
+                                transform: [{ translateY: animatedOffsetTop || 0 }],
+                            },
+                        ]}
+                    >
+                        <Animated.View
+                            renderToHardwareTextureAndroid
+                            style={dynamicStyles.filledBar}
+                        />
+
+                        <ToolTip
+                            value={currentTopValue}
+                            handleSize={handleSize}
+                            tooltipPosition={tooltipPosition}
+                        />
+
+                    </Animated.View>
+
+                    <Animated.View
+                        {...panResponderBottom.panHandlers}
+                        style={[
+                            styles.circle,
+                            {
+                                width: handleSize,
+                                height: handleSize,
+                                transform: [
+                                    { translateY: animatedOffsetBottom || 0 },
+                                ],
+                            },
+                        ]}
+                    />
+                </View>
+            </View>
             <LabelText text="bot" value={currentBottomValue} />
         </View>
+
     );
 }
 

@@ -12,8 +12,8 @@ function App(): React.JSX.Element {
     const maxValue = 1000;
     const minValue = 0;
 
-    const [topValue, setTopValue] = useState(900);
-    const [bottomValue, setBottomValue] = useState(100);
+    const [topValue, setTopValue] = useState(700);
+    const [bottomValue, setBottomValue] = useState(200);
     const [pressed, setPressed] = useState(true);
 
     const backgroundStyle = {
@@ -46,10 +46,8 @@ function App(): React.JSX.Element {
 
                 algorithm={linearAlgorithm}
 
-                topLabel={<Label value={10} />}
-                bottomLabel={<Label value={100} />}
-
-                shouldSnap={false}
+                showSnapLines={true}
+                shouldSnap={true}
                 snappingPoints={[minValue, 100, 200, 300, 400, 500, 600, 700, 800, 900, maxValue]}
 
                 topHandleValue={topValue}
