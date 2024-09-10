@@ -4,8 +4,14 @@ import { SafeAreaView, View, Text, Pressable } from 'react-native';
 import VerticalRheostat from './VerticalRheostat/VerticalRheostat';
 import { linearAlgorithm, log10Algorithm } from './VerticalRheostat/algorithm';
 
-function Label({ value }) {
-    return <Text style={{ color: 'white', fontSize: 16 }}>{value}</Text>;
+function Label({ text }) {
+    return <View style={{
+        backgroundColor: 'blue',
+        justifyContent: 'center',
+        alignItems: 'center',
+    }}>
+        <Text style={{ color: 'white', fontSize: 16 }}>{text}</Text>
+    </View>;
 }
 
 function App(): React.JSX.Element {
@@ -34,26 +40,28 @@ function App(): React.JSX.Element {
         >
             <VerticalRheostat
                 handleSize={24}
-                handleDelta={0}
+                handleDelta={10}
                 rheostatWidth={200}
                 rheostatHeight={600}
 
-                tooltipPosition="left"
+                tooltipPosition="right"
                 tooltipTextSuffix=" °C"
 
                 minRange={minValue}
                 maxRange={maxValue}
                 algorithm={linearAlgorithm}
 
-                topLabel={<Label value={topValue} />}
-                bottomLabel={<Label value={bottomValue} />}
+                topLabel={<Label text="Top Label" />}
+                bottomLabel={<Label text="Vottom Label" />}
 
                 showSnapLines={true}
-                shouldSnap={true}
+                shouldSnap={false}
                 snappingPoints={[minValue, 100, 200, 300, 400, 500, 600, 700, 800, 900, maxValue]}
 
                 topHandleValue={topValue}
                 bottomHandleValue={bottomValue}
+
+                tooltipFloatPrecision={0}
 
                 labelStyles={{
                     backgroundColor: 'yellow',

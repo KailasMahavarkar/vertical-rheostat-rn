@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Animated, PanResponder } from 'react-native';
 import { linearAlgorithm } from './algorithm';
-import { jslog, clampRange, offsetToPercentage, percentToRheostatSize, offsetToRheostatSize } from './utils';
+import { clampRange, offsetToPercentage, percentToRheostatSize, offsetToRheostatSize } from './utils';
 import propTypes from 'prop-types';
 
 const CONSTANTS = {
@@ -10,20 +10,40 @@ const CONSTANTS = {
 };
 
 const PropTypes = {
+    /* The value of the top handle */
     topHandleValue: propTypes.number,
+    /* The value of the bottom handle */
     bottomHandleValue: propTypes.number,
-    minRange: propTypes.number,
-    maxRange: propTypes.number,
+    /* The minimum range value */
+    minRange: propTypes.number.isRequired,
+    /* The maximum range value */
+    maxRange: propTypes.number.isRequired,
+    /* The size of the handle(circle) */
     handleSize: propTypes.number,
-    algorithm: propTypes.object,
-    rheostatWidth: propTypes.number,
-    snappingPoints: propTypes.array,
-    rheostatHeight: propTypes.number,
-    tooltipTextSuffix: propTypes.string,
-    tooltipPosition: propTypes.string,
-    showSnapLines: propTypes.bool,
+    /* when delta is 0 both handle overlap completely, when delta equals handleSize both handle will never overlap(in terms of UI)  */
     handleDelta: propTypes.number,
+    /* The algorithm to be used */
+    algorithm: propTypes.object,
+    /* The width of the rheostat */
+    rheostatWidth: propTypes.number.isRequired,
+    /* The height of the rheostat */
+    rheostatHeight: propTypes.number,
+    /* The snapping points (should be valid number between minRange and maxRange inclusive) */
+    snappingPoints: propTypes.array,
+    /* The suffix of the tooltip text */
+    tooltipTextSuffix: propTypes.string,
+    /* The position of the tooltip */
+    tooltipPosition: propTypes.string,
+    /* The float precision of the tooltip */
+    tooltipFloatPrecision: propTypes.number,
+    /* The show snap lines */
+    showSnapLines: propTypes.bool,
+    /* Should snap to the snapping points */
     shouldSnap: propTypes.bool,
+    /* The top label */
+    topLabel: propTypes.node,
+    /* The bottom label */
+    bottomLabel: propTypes.node,
 };
 
 
@@ -82,7 +102,14 @@ const styles = StyleSheet.create({
 })
 
 
-function ToolTip({ value, handleSize, position, suffix, diff }) {
+function ToolTip({
+    value = 0,
+    handleSize = 24,
+    position = 'left',
+    suffix = '',
+    diff = 0,
+    floatPrecision = 0,
+}) {
     const dynamicStyles = StyleSheet.create({
         tooltipTop: {
             backgroundColor: '#00857a',
@@ -104,15 +131,15 @@ function ToolTip({ value, handleSize, position, suffix, diff }) {
         <Animated.View style={dynamicStyles.tooltipTop}>
             <Text style={styles.toolTipText}>
                 {
-                    position === 'left' && (
+                    position === 'left' && diff > 0 && (
                         <Text style={styles.tooltipTransparentText}>
                             {'0'.repeat(diff)}
                         </Text>
                     )
                 }
-                {`${Math.round(value)} ${suffix}`}
+                {`${Number(value.toString()).toFixed(floatPrecision)} ${suffix}`}
                 {
-                    position === 'right' && (
+                    position === 'right' && diff > 0 && (
                         <Text style={styles.tooltipTransparentText}>
                             {'0'.repeat(diff)}
                         </Text>
@@ -123,8 +150,6 @@ function ToolTip({ value, handleSize, position, suffix, diff }) {
         </Animated.View>
     );
 }
-
-
 
 function VerticalRheostat({
     topHandleValue = 0,
@@ -141,6 +166,9 @@ function VerticalRheostat({
     showSnapLines = false,
     handleDelta = 20,
     shouldSnap = false,
+    topLabel = React.Fragment,
+    bottomLabel = React.Fragment,
+    tooltipFloatPrecision = 0,
 }) {
     const rheostatSize = rheostatHeight - handleSize;
     const animatedOffsetTop = useRef(new Animated.Value(0)).current;
@@ -153,6 +181,8 @@ function VerticalRheostat({
         algorithm.getPosition(point, minRange, maxRange)
     );
     const [filledBarHeight, setFilledBarHeight] = useState(0);
+    const [activeHandle, setActiveHandle] = useState('top');
+    const [isDragging, setIsDragging] = useState(false);
 
     const getValues = useCallback(() => {
         const topOffset = animatedOffsetTop.__getValue();
@@ -256,6 +286,8 @@ function VerticalRheostat({
         }
         const { barFilledPercent } = getValues();
         setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
+
+        setIsDragging(true);
     }
 
     function onPanEnd(panType, event, gestureState) {
@@ -266,6 +298,8 @@ function VerticalRheostat({
             const clampOffset = getClampOffsetBottom(lastOffsetBottom.current + gestureState.dy);
             lastOffsetBottom.current = -clampOffset;
         }
+
+        setIsDragging(false);
     }
 
     // calculate the filled bar height on initial render
@@ -297,7 +331,7 @@ function VerticalRheostat({
         lastOffsetTop.current = offsetFromTop;
         setCurrentTopValue(topHandleValue);
 
-        // // re-calculate the filled bar height
+        // re-calculate the filled bar height
         const { barFilledPercent } = getValues();
         setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
     }, [topHandleValue]);
@@ -307,6 +341,9 @@ function VerticalRheostat({
         PanResponder.create({
             onStartShouldSetPanResponder: () => true, // Respond to touch events
             onMoveShouldSetPanResponder: () => true, // Continue responding when moving
+            onPanResponderGrant: () => {
+                setActiveHandle(panType);
+            },
             onPanResponderMove: (event, gestureState) => onPanMove(panType, event, gestureState),
             onPanResponderRelease: (event, gestureState) => onPanEnd(panType, event, gestureState),
             onPanResponderTerminate: (event, gestureState) => onPanEnd(panType, event, gestureState),
@@ -315,8 +352,8 @@ function VerticalRheostat({
     const panResponderTop = useRef(createPanResponder('top')).current;
     const panResponderBottom = useRef(createPanResponder('bottom')).current;
     const maxWidthLength = maxRange.toString().length;
-    const topValueDiff = maxWidthLength - currentTopValue.toString().length;
-    const bottomValueDiff = maxWidthLength - currentBottomValue.toString().length;
+    const topValueDiff = maxWidthLength - parseInt(currentTopValue.toString(), 10).toString().length;
+    const bottomValueDiff = maxWidthLength - parseInt(currentBottomValue.toString(), 10).toString().length;
 
 
     const dynamicStyles = StyleSheet.create({
@@ -358,121 +395,156 @@ function VerticalRheostat({
             backgroundColor: '#00857a',
             width: handleSize,
             height: handleSize,
+            zIndex: 3,
         },
+
+        activeCircle: {
+            backgroundColor: 'red',
+            position: 'absolute',
+            opacity: 0.7,
+            zIndex: 2,
+            borderRadius: 500,
+            width: handleSize + 4,
+            height: handleSize + 4,
+            transform: [
+                { translateX: -2 },
+                { translateY: -2 }
+            ],
+        }
     });
 
     return (
         <View>
-            <View style={dynamicStyles.unFilledBar} />
+            {topLabel && topLabel}
             <View>
-                {shouldSnap && showSnapLines && (
-                    <View style={dynamicStyles.snapBarWrapper}>
-                        {snappingPercentageArray.map((percentage, index) => {
-                            const width = 5 + (percentage * 15) / 100;
-                            return (
-                                <View
-                                    key={index}
-                                    style={[
-                                        {
-                                            position: 'absolute',
-                                            width: width,
-                                            height: 2,
-                                            backgroundColor: 'white',
-                                        },
-                                        tooltipPosition === 'right'
-                                            ? {
-                                                left: handleSize / 2 + 8,
-                                                top: `${100 - percentage}%`,
-                                            }
-                                            : {
-                                                right: handleSize / 2 + 8,
-                                                top: `${100 - percentage}%`,
+                <View style={dynamicStyles.unFilledBar} />
+                <View>
+                    {shouldSnap && showSnapLines && (
+                        <View style={dynamicStyles.snapBarWrapper}>
+                            {snappingPercentageArray.map((percentage, index) => {
+                                const width = 5 + (percentage * 15) / 100;
+                                return (
+                                    <View
+                                        key={index}
+                                        style={[
+                                            {
+                                                position: 'absolute',
+                                                width: width,
+                                                height: 2,
+                                                backgroundColor: 'white',
                                             },
-                                    ]}
-                                />
-                            );
-                        })}
-                    </View>
-                )}
-            </View>
+                                            tooltipPosition === 'right'
+                                                ? {
+                                                    left: handleSize / 2 + 8,
+                                                    top: `${100 - percentage}%`,
+                                                }
+                                                : {
+                                                    right: handleSize / 2 + 8,
+                                                    top: `${100 - percentage}%`,
+                                                },
+                                        ]}
+                                    />
+                                );
+                            })}
+                        </View>
+                    )}
+                </View>
 
-            <View style={dynamicStyles.handleWrapper}>
-                <Animated.View
-                    {...panResponderTop.panHandlers}
-                    style={[
+                <View style={dynamicStyles.handleWrapper}>
+                    <Animated.View
+                        {...panResponderTop.panHandlers}
+                        style={[
+                            {
+                                zIndex: activeHandle === 'top' ? 1 : 0,
+                                transform: [
+                                    { translateY: animatedOffsetTop || 0 },
+                                ],
+                            },
+                        ]}
+                    >
+
+                        <Animated.View
+                            renderToHardwareTextureAndroid
+                            style={dynamicStyles.filledBar}
+                        />
+
+                        <View style={dynamicStyles.circle} />
                         {
-                            transform: [
-                                { translateY: animatedOffsetTop || 0 },
-                            ],
-                        },
-                    ]}
-                >
+                            isDragging && activeHandle === 'top' && (
+                                <View style={dynamicStyles.activeCircle} />
+                            )
+                        }
+
+                        <View
+                            style={[
+                                tooltipPosition === 'right' ? {
+                                    position: 'absolute',
+                                    left: handleSize + 16,
+                                } : {
+                                    position: 'absolute',
+                                    right: handleSize + 16,
+                                }
+                            ]}>
+
+                            <ToolTip
+                                value={currentTopValue}
+                                handleSize={handleSize}
+                                position={tooltipPosition}
+                                suffix={tooltipTextSuffix}
+                                diff={topValueDiff}
+                                floatPrecision={tooltipFloatPrecision}
+                            />
+                        </View>
+                    </Animated.View>
+
+
 
                     <Animated.View
-                        renderToHardwareTextureAndroid
-                        style={dynamicStyles.filledBar}
-                    />
-
-                    <View style={dynamicStyles.circle} />
-
-                    <View
+                        {...panResponderBottom.panHandlers}
                         style={[
-                            tooltipPosition === 'right' ? {
-                                position: 'absolute',
-                                left: handleSize + 16,
-                            } : {
-                                position: 'absolute',
-                                right: handleSize + 16,
-                            }
-                        ]}>
+                            {
+                                zIndex: activeHandle === 'bottom' ? 1 : 0,
+                                transform: [
+                                    { translateY: animatedOffsetBottom || 0 },
+                                ],
+                            },
+                        ]}
+                    >
 
-                        <ToolTip
-                            value={currentTopValue}
-                            handleSize={handleSize}
-                            position={tooltipPosition}
-                            suffix={tooltipTextSuffix}
-                            diff={topValueDiff}
-                        />
-                    </View>
-                </Animated.View>
-
-
-
-                <Animated.View
-                    {...panResponderBottom.panHandlers}
-                    style={[
+                        <View style={dynamicStyles.circle} />
                         {
-                            transform: [
-                                { translateY: animatedOffsetBottom || 0 },
-                            ],
-                        },
-                    ]}
-                >
-                    <View style={dynamicStyles.circle} />
+                            isDragging && activeHandle === 'bottom' && (
+                                <View style={dynamicStyles.activeCircle} />
+                            )
+                        }
 
-                    <View
-                        style={[
-                            tooltipPosition === 'right' ? {
-                                position: 'absolute',
-                                left: handleSize + 16,
-                            } : {
-                                position: 'absolute',
-                                right: handleSize + 16,
-                            }
-                        ]}>
 
-                        <ToolTip
-                            value={currentBottomValue}
-                            handleSize={handleSize}
-                            position={tooltipPosition}
-                            suffix={tooltipTextSuffix}
-                            diff={bottomValueDiff}
-                        />
-                    </View>
-                </Animated.View>
+                        <View
+                            style={[
+                                tooltipPosition === 'right' ? {
+                                    position: 'absolute',
+                                    left: handleSize + 16,
+                                } : {
+                                    position: 'absolute',
+                                    right: handleSize + 16,
+                                }
+                            ]}>
 
-            </View>
-        </View >
+                            <ToolTip
+                                value={currentBottomValue}
+                                handleSize={handleSize}
+                                position={tooltipPosition}
+                                suffix={tooltipTextSuffix}
+                                diff={bottomValueDiff}
+                                floatPrecision={tooltipFloatPrecision}
+                            />
+                        </View>
+                    </Animated.View>
+
+                </View>
+            </View >
+            {bottomLabel && bottomLabel}
+        </View>
 
     );
 }
