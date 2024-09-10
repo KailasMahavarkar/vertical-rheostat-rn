@@ -17,7 +17,7 @@ function App(): React.JSX.Element {
     const [pressed, setPressed] = useState(true);
 
     const backgroundStyle = {
-        backgroundColor: 'black'
+        backgroundColor: 'black',
     };
 
     return <SafeAreaView style={backgroundStyle} >
@@ -33,18 +33,20 @@ function App(): React.JSX.Element {
             }}
         >
             <VerticalRheostat
-                handleSize={30}
+                handleSize={24}
                 handleDelta={0}
                 rheostatWidth={200}
                 rheostatHeight={600}
 
                 tooltipPosition="left"
-                suffix=' Lakh'
+                tooltipTextSuffix=" °C"
 
                 minRange={minValue}
                 maxRange={maxValue}
-
                 algorithm={linearAlgorithm}
+
+                topLabel={<Label value={topValue} />}
+                bottomLabel={<Label value={bottomValue} />}
 
                 showSnapLines={true}
                 shouldSnap={true}
@@ -52,7 +54,12 @@ function App(): React.JSX.Element {
 
                 topHandleValue={topValue}
                 bottomHandleValue={bottomValue}
+
+                labelStyles={{
+                    backgroundColor: 'yellow',
+                }}
             />
+
 
             <Pressable
                 onPress={() => {

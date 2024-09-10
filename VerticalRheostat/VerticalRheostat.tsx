@@ -2,35 +2,30 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Animated, PanResponder } from 'react-native';
 import { linearAlgorithm } from './algorithm';
 import { jslog, clampRange, offsetToPercentage, percentToRheostatSize, offsetToRheostatSize } from './utils';
+import propTypes from 'prop-types';
 
 const CONSTANTS = {
     TRIANGLE_SIZE_X: 6,
     TRIANGLE_SIZE_Y: 8,
 };
 
+const PropTypes = {
+    topHandleValue: propTypes.number,
+    bottomHandleValue: propTypes.number,
+    minRange: propTypes.number,
+    maxRange: propTypes.number,
+    handleSize: propTypes.number,
+    algorithm: propTypes.object,
+    rheostatWidth: propTypes.number,
+    snappingPoints: propTypes.array,
+    rheostatHeight: propTypes.number,
+    tooltipTextSuffix: propTypes.string,
+    tooltipPosition: propTypes.string,
+    showSnapLines: propTypes.bool,
+    handleDelta: propTypes.number,
+    shouldSnap: propTypes.bool,
+};
 
-function LabelText({ value, text }) {
-
-    return (
-        <View
-            style={{
-                borderWidth: 1,
-                borderColor: 'red',
-                width: 200,
-            }}
-        >
-            <Text
-                style={{
-                    color: 'white',
-                    fontSize: 16,
-                    textAlign: 'center',
-                }}
-            >
-                {text} {typeof value === 'number' ? value.toFixed(2) : value}
-            </Text>
-        </View>
-    );
-}
 
 function getClosestIndex(array, target) {
     let left = 0;
@@ -64,85 +59,68 @@ function getClosestIndex(array, target) {
 }
 
 const styles = StyleSheet.create({
-    circle: {
-        borderRadius: 500,
-        backgroundColor: '#00857a',
+    tooltipTriangle: {
+        borderTopWidth: CONSTANTS.TRIANGLE_SIZE_X,
+        borderBottomWidth: CONSTANTS.TRIANGLE_SIZE_X,
+        borderLeftWidth: CONSTANTS.TRIANGLE_SIZE_Y,
+        borderRightWidth: 0,
+        borderTopColor: 'transparent',
+        borderBottomColor: 'transparent',
+        borderLeftColor: '#00857a',
+        borderRightColor: '#00857a',
+        position: 'absolute',
     },
+    tooltipTransparentText: {
+        color: 'transparent',
+    },
+    toolTipText: {
+        color: 'white',
+        fontSize: 13,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+})
 
-    handleWrapper: {
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexDirection: 'column',
-        width: 200,
-        height: 600,
-        borderWidth: 1,
-        borderColor: 'red',
-    }
-});
 
-
-function ToolTip({ value, handleSize, tooltipPosition, maxRange }) {
+function ToolTip({ value, handleSize, position, suffix, diff }) {
     const dynamicStyles = StyleSheet.create({
-        triangleLeft: {
-            borderTopWidth: CONSTANTS.TRIANGLE_SIZE_X,
-            borderBottomWidth: CONSTANTS.TRIANGLE_SIZE_X,
-            borderRightWidth: CONSTANTS.TRIANGLE_SIZE_Y,
-            borderLeftWidth: 0,
-            borderTopColor: 'transparent',
-            borderBottomColor: 'transparent',
-            borderLeftColor: '#00857a',
-            borderRightColor: '#00857a',
-            position: 'absolute',
+        tooltipTop: {
+            backgroundColor: '#00857a',
+            borderRadius: 3,
+            height: handleSize,
         },
-        traingleRight: {
-            borderTopWidth: CONSTANTS.TRIANGLE_SIZE_X,
-            borderBottomWidth: CONSTANTS.TRIANGLE_SIZE_X,
-            borderLeftWidth: CONSTANTS.TRIANGLE_SIZE_Y,
-            borderRightWidth: 0,
-            borderTopColor: 'transparent',
-            borderBottomColor: 'transparent',
-            borderLeftColor: '#00857a',
-            borderRightColor: '#00857a',
-            position: 'absolute',
-        },
-    })
+    });
 
+    const triangleStyle = [
+        styles.tooltipTriangle,
+        {
+            top: handleSize / 2 - CONSTANTS.TRIANGLE_SIZE_X,
+            [position === 'right' ? 'left' : 'right']: -CONSTANTS.TRIANGLE_SIZE_Y,
+            transform: position === 'left' ? [] : [{ rotate: '180deg' }],
+        },
+    ];
 
     return (
-        <View
-            style={[{
-                position: 'absolute',
-                width: 100,
-                height: handleSize,
-                backgroundColor: 'red',
-                justifyContent: 'center',
-                alignItems: 'center',
-            },
-            tooltipPosition === 'right'
-                ? { left: handleSize + 16 }
-                : { right: handleSize + 16 }
-            ]}
-        >
-            <View
-                style={[
-                    dynamicStyles.triangleLeft,
-                    tooltipPosition === 'right' ? {
-                        left: -CONSTANTS.TRIANGLE_SIZE_Y,
-                    } : {
-                        right: -CONSTANTS.TRIANGLE_SIZE_Y,
-                        transform: [
-                            {
-                                rotate: '180deg',
-                            },
-                        ],
-                    },
-                ]}
-            />
-
-            <Text style={{ color: 'white' }}>
-                {value}
+        <Animated.View style={dynamicStyles.tooltipTop}>
+            <Text style={styles.toolTipText}>
+                {
+                    position === 'left' && (
+                        <Text style={styles.tooltipTransparentText}>
+                            {'0'.repeat(diff)}
+                        </Text>
+                    )
+                }
+                {`${Math.round(value)} ${suffix}`}
+                {
+                    position === 'right' && (
+                        <Text style={styles.tooltipTransparentText}>
+                            {'0'.repeat(diff)}
+                        </Text>
+                    )
+                }
             </Text>
-        </View>
+            <View style={triangleStyle} />
+        </Animated.View>
     );
 }
 
@@ -152,12 +130,13 @@ function VerticalRheostat({
     topHandleValue = 0,
     bottomHandleValue = 0,
     minRange = 0,
-    maxRange = 800,
+    maxRange = 1000,
     handleSize = 50,
     algorithm = linearAlgorithm,
     rheostatWidth = 200,
     snappingPoints = [],
     rheostatHeight = 600,
+    tooltipTextSuffix = '',
     tooltipPosition = 'left',
     showSnapLines = false,
     handleDelta = 20,
@@ -166,12 +145,10 @@ function VerticalRheostat({
     const rheostatSize = rheostatHeight - handleSize;
     const animatedOffsetTop = useRef(new Animated.Value(0)).current;
     const animatedOffsetBottom = useRef(new Animated.Value(0)).current;
-
-    const lastOffsetTop = useRef(0);
-    const lastOffsetBottom = useRef(0);
-
     const [currentTopValue, setCurrentTopValue] = useState(topHandleValue);
     const [currentBottomValue, setCurrentBottomValue] = useState(bottomHandleValue);
+    const lastOffsetTop = useRef(0);
+    const lastOffsetBottom = useRef(0);
     const snappingPercentageArray = snappingPoints.map(point =>
         algorithm.getPosition(point, minRange, maxRange)
     );
@@ -337,6 +314,9 @@ function VerticalRheostat({
 
     const panResponderTop = useRef(createPanResponder('top')).current;
     const panResponderBottom = useRef(createPanResponder('bottom')).current;
+    const maxWidthLength = maxRange.toString().length;
+    const topValueDiff = maxWidthLength - currentTopValue.toString().length;
+    const bottomValueDiff = maxWidthLength - currentBottomValue.toString().length;
 
 
     const dynamicStyles = StyleSheet.create({
@@ -348,17 +328,42 @@ function VerticalRheostat({
             backgroundColor: '#00857a',
             borderRadius: 3,
         },
+        unFilledBar: {
+            width: 4,
+            height: rheostatSize,
+            top: handleSize / 2,
+            position: 'absolute',
+            left: rheostatWidth / 2 - 2,
+            backgroundColor: '#d5d5d5',
+            borderRadius: 3,
+        },
         snapBarWrapper: {
             position: 'absolute',
-            height: rheostatHeight - handleSize,
+            height: rheostatSize,
+            borderWidth: 1,
             width: rheostatWidth,
             top: handleSize / 2,
+        },
+        handleWrapper: {
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexDirection: 'column',
+            width: rheostatWidth,
+            height: rheostatHeight,
+            borderWidth: 1,
+            borderColor: 'red',
+        },
+        circle: {
+            borderRadius: 500,
+            backgroundColor: '#00857a',
+            width: handleSize,
+            height: handleSize,
         },
     });
 
     return (
         <View>
-            <LabelText text="top" value={currentTopValue} />
+            <View style={dynamicStyles.unFilledBar} />
             <View>
                 {shouldSnap && showSnapLines && (
                     <View style={dynamicStyles.snapBarWrapper}>
@@ -389,50 +394,89 @@ function VerticalRheostat({
                         })}
                     </View>
                 )}
-                <View style={styles.handleWrapper}>
+            </View>
+
+            <View style={dynamicStyles.handleWrapper}>
+                <Animated.View
+                    {...panResponderTop.panHandlers}
+                    style={[
+                        {
+                            transform: [
+                                { translateY: animatedOffsetTop || 0 },
+                            ],
+                        },
+                    ]}
+                >
+
                     <Animated.View
-                        {...panResponderTop.panHandlers}
+                        renderToHardwareTextureAndroid
+                        style={dynamicStyles.filledBar}
+                    />
+
+                    <View style={dynamicStyles.circle} />
+
+                    <View
                         style={[
-                            styles.circle,
-                            {
-                                width: handleSize,
-                                height: handleSize,
-                                transform: [{ translateY: animatedOffsetTop || 0 }],
-                            },
-                        ]}
-                    >
-                        <Animated.View
-                            renderToHardwareTextureAndroid
-                            style={dynamicStyles.filledBar}
-                        />
+                            tooltipPosition === 'right' ? {
+                                position: 'absolute',
+                                left: handleSize + 16,
+                            } : {
+                                position: 'absolute',
+                                right: handleSize + 16,
+                            }
+                        ]}>
 
                         <ToolTip
                             value={currentTopValue}
                             handleSize={handleSize}
-                            tooltipPosition={tooltipPosition}
+                            position={tooltipPosition}
+                            suffix={tooltipTextSuffix}
+                            diff={topValueDiff}
                         />
+                    </View>
+                </Animated.View>
 
-                    </Animated.View>
 
-                    <Animated.View
-                        {...panResponderBottom.panHandlers}
+
+                <Animated.View
+                    {...panResponderBottom.panHandlers}
+                    style={[
+                        {
+                            transform: [
+                                { translateY: animatedOffsetBottom || 0 },
+                            ],
+                        },
+                    ]}
+                >
+                    <View style={dynamicStyles.circle} />
+
+                    <View
                         style={[
-                            styles.circle,
-                            {
-                                width: handleSize,
-                                height: handleSize,
-                                transform: [
-                                    { translateY: animatedOffsetBottom || 0 },
-                                ],
-                            },
-                        ]}
-                    />
-                </View>
+                            tooltipPosition === 'right' ? {
+                                position: 'absolute',
+                                left: handleSize + 16,
+                            } : {
+                                position: 'absolute',
+                                right: handleSize + 16,
+                            }
+                        ]}>
+
+                        <ToolTip
+                            value={currentBottomValue}
+                            handleSize={handleSize}
+                            position={tooltipPosition}
+                            suffix={tooltipTextSuffix}
+                            diff={bottomValueDiff}
+                        />
+                    </View>
+                </Animated.View>
+
             </View>
-            <LabelText text="bot" value={currentBottomValue} />
-        </View>
+        </View >
 
     );
 }
+
+VerticalRheostat.propTypes = PropTypes;
 
 export default VerticalRheostat;
