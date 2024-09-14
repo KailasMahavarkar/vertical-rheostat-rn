@@ -222,6 +222,19 @@ function VerticalRheostat({
         return clampOffset;
     }, [getValues, handleDelta, rheostatSize]);
 
+    function onPanGrant(panType, event, gestureState) {
+        setActiveHandle(panType);
+
+        const { topOffset, bottomOffset } = getValues();
+
+        // set the last offset based on the pan type
+        if (panType === 'top') {
+            lastOffsetTop.current = topOffset;
+        } else {
+            lastOffsetBottom.current = bottomOffset;
+        }
+    }
+
     function onPanMove(panType, event, gestureState) {
         let deltaTop;
         let deltaBottom;
@@ -286,7 +299,6 @@ function VerticalRheostat({
         }
         const { barFilledPercent } = getValues();
         setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
-
         setIsDragging(true);
     }
 
@@ -341,9 +353,7 @@ function VerticalRheostat({
         PanResponder.create({
             onStartShouldSetPanResponder: () => true, // Respond to touch events
             onMoveShouldSetPanResponder: () => true, // Continue responding when moving
-            onPanResponderGrant: () => {
-                setActiveHandle(panType);
-            },
+            onPanResponderGrant: (event, gestureState) => onPanGrant(panType, event, gestureState),
             onPanResponderMove: (event, gestureState) => onPanMove(panType, event, gestureState),
             onPanResponderRelease: (event, gestureState) => onPanEnd(panType, event, gestureState),
             onPanResponderTerminate: (event, gestureState) => onPanEnd(panType, event, gestureState),
