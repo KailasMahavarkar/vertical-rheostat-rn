@@ -1,0 +1,280 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`<ZoomableImage /> render Should render with custom props 1`] = `
+<ZoomableImage
+  aspectRatio="21:9"
+  data-testing-id="parent"
+  defaultSrc=""
+  doubleTapDelay={300}
+  maxScale={4}
+  onDoubleTap={[MockFunction]}
+  onPinch={[MockFunction]}
+  onTouchMove={[MockFunction]}
+  onTouchRelease={[Function]}
+  placeholderSrc="https://imgd.aeplcdn.com/310x174/n/cw/ec/54437/2021-wrangler-exterior-right-front-three-quarter.jpeg?q=75"
+  shouldZoomOnPinch={false}
+  src="https://imgd.aeplcdn.com/0x0/n/cw/ec/41523/sonet-exterior-right-front-three-quarter-108.jpeg?q=85"
+  style={
+    {
+      "padding": 10,
+    }
+  }
+  threshold={2}
+  thresholdSwipeValue={50}
+  width={360}
+  wrapperStyle={
+    {
+      "padding": 10,
+    }
+  }
+>
+  <View
+    accessibilityLabel="parent-zoomable-image-wrapper"
+    onMoveShouldSetResponder={[Function]}
+    onMoveShouldSetResponderCapture={[Function]}
+    onResponderEnd={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderReject={[Function]}
+    onResponderRelease={[Function]}
+    onResponderStart={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    onStartShouldSetResponderCapture={[Function]}
+    style={
+      [
+        {
+          "overflow": "hidden",
+        },
+        {
+          "padding": 10,
+        },
+        {
+          "height": 154.28571428571428,
+          "width": 360,
+        },
+      ]
+    }
+    testID="parent-zoomable-image-wrapper"
+  >
+    <View
+      accessibilityLabel="parent-zoomable-image-wrapper"
+      onMoveShouldSetResponder={[Function]}
+      onMoveShouldSetResponderCapture={[Function]}
+      onResponderEnd={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderReject={[Function]}
+      onResponderRelease={[Function]}
+      onResponderStart={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onStartShouldSetResponderCapture={[Function]}
+      style={
+        [
+          {
+            "overflow": "hidden",
+          },
+          {
+            "padding": 10,
+          },
+          {
+            "height": 154.28571428571428,
+            "width": 360,
+          },
+        ]
+      }
+      testID="parent-zoomable-image-wrapper"
+    >
+      <Image
+        accessibilityLabel="parent-zoomable-image"
+        defaultSource=""
+        onError={[Function]}
+        source={
+          {
+            "uri": "https://imgd.aeplcdn.com/0x0/n/cw/ec/41523/sonet-exterior-right-front-three-quarter-108.jpeg?q=85",
+          }
+        }
+        style={
+          [
+            {
+              "position": "absolute",
+            },
+            {
+              "padding": 10,
+            },
+            {
+              "height": 154.28571428571428,
+              "left": 0,
+              "top": 0,
+              "width": 360,
+            },
+          ]
+        }
+        testID="parent-zoomable-image"
+      >
+        <Image
+          accessibilityLabel="parent-zoomable-image"
+          defaultSource=""
+          onError={[Function]}
+          source={
+            {
+              "uri": "https://imgd.aeplcdn.com/0x0/n/cw/ec/41523/sonet-exterior-right-front-three-quarter-108.jpeg?q=85",
+            }
+          }
+          style={
+            [
+              {
+                "position": "absolute",
+              },
+              {
+                "padding": 10,
+              },
+              {
+                "height": 154.28571428571428,
+                "left": 0,
+                "top": 0,
+                "width": 360,
+              },
+            ]
+          }
+          testID="parent-zoomable-image"
+        />
+      </Image>
+    </View>
+  </View>
+</ZoomableImage>
+`;
+
+exports[`<ZoomableImage /> render Should render with default props 1`] = `
+<ZoomableImage
+  aspectRatio="16:9"
+  defaultSrc="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+  doubleTapDelay={500}
+  maxScale={3}
+  onDoubleTap={[Function]}
+  onPinch={[Function]}
+  onTouchMove={[Function]}
+  onTouchRelease={[Function]}
+  placeholderSrc="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+  shouldZoomOnPinch={false}
+  src=""
+  style={null}
+  threshold={1.5}
+  thresholdSwipeValue={50}
+  width={360}
+  wrapperStyle={null}
+>
+  <View
+    accessibilityLabel={null}
+    onMoveShouldSetResponder={[Function]}
+    onMoveShouldSetResponderCapture={[Function]}
+    onResponderEnd={[Function]}
+    onResponderGrant={[Function]}
+    onResponderMove={[Function]}
+    onResponderReject={[Function]}
+    onResponderRelease={[Function]}
+    onResponderStart={[Function]}
+    onResponderTerminate={[Function]}
+    onResponderTerminationRequest={[Function]}
+    onStartShouldSetResponder={[Function]}
+    onStartShouldSetResponderCapture={[Function]}
+    style={
+      [
+        {
+          "overflow": "hidden",
+        },
+        null,
+        {
+          "height": 202.5,
+          "width": 360,
+        },
+      ]
+    }
+    testID={null}
+  >
+    <View
+      accessibilityLabel={null}
+      onMoveShouldSetResponder={[Function]}
+      onMoveShouldSetResponderCapture={[Function]}
+      onResponderEnd={[Function]}
+      onResponderGrant={[Function]}
+      onResponderMove={[Function]}
+      onResponderReject={[Function]}
+      onResponderRelease={[Function]}
+      onResponderStart={[Function]}
+      onResponderTerminate={[Function]}
+      onResponderTerminationRequest={[Function]}
+      onStartShouldSetResponder={[Function]}
+      onStartShouldSetResponderCapture={[Function]}
+      style={
+        [
+          {
+            "overflow": "hidden",
+          },
+          null,
+          {
+            "height": 202.5,
+            "width": 360,
+          },
+        ]
+      }
+      testID={null}
+    >
+      <Image
+        accessibilityLabel={null}
+        defaultSource="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+        onError={[Function]}
+        source={
+          {
+            "uri": "https://imgd.aeplcdn.com/0x0/no-image/no-image.png",
+          }
+        }
+        style={
+          [
+            {
+              "position": "absolute",
+            },
+            null,
+            {
+              "height": 202.5,
+              "left": 0,
+              "top": 0,
+              "width": 360,
+            },
+          ]
+        }
+        testID={null}
+      >
+        <Image
+          accessibilityLabel={null}
+          defaultSource="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+          onError={[Function]}
+          source={
+            {
+              "uri": "https://imgd.aeplcdn.com/0x0/no-image/no-image.png",
+            }
+          }
+          style={
+            [
+              {
+                "position": "absolute",
+              },
+              null,
+              {
+                "height": 202.5,
+                "left": 0,
+                "top": 0,
+                "width": 360,
+              },
+            ]
+          }
+          testID={null}
+        />
+      </Image>
+    </View>
+  </View>
+</ZoomableImage>
+`;

@@ -1,0 +1,358 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`<Image /> component props should handle error and render placeholder image 1`] = `
+<Image
+  aspectRatio="16:9"
+  defaultSrc=""
+  placeholderSrc="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+  src=""
+>
+  <View
+    style={
+      {
+        "width": "100%",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Image
+        accessibilityLabel={null}
+        defaultSource=""
+        onError={[Function]}
+        resizeMode="contain"
+        source={
+          {
+            "uri": "https://imgd.aeplcdn.com/0x0/no-image/no-image.png",
+          }
+        }
+        style={
+          {
+            "aspectRatio": 1.7777777777777777,
+          }
+        }
+        testID={null}
+      >
+        <Image
+          accessibilityLabel={null}
+          defaultSource=""
+          onError={[Function]}
+          resizeMode="contain"
+          source={
+            {
+              "uri": "https://imgd.aeplcdn.com/0x0/no-image/no-image.png",
+            }
+          }
+          style={
+            {
+              "aspectRatio": 1.7777777777777777,
+            }
+          }
+          testID={null}
+        />
+      </Image>
+    </View>
+  </View>
+</Image>
+`;
+
+exports[`<Image /> component props should render Image with data-testing-id 1`] = `
+<Image
+  aspectRatio="16:9"
+  data-testing-id="review"
+  defaultSrc=""
+  placeholderSrc="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+  src="https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80"
+>
+  <View
+    style={
+      {
+        "width": "100%",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Image
+        accessibilityLabel="review-image"
+        defaultSource=""
+        onError={[Function]}
+        resizeMode="contain"
+        source={
+          {
+            "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+          }
+        }
+        style={
+          {
+            "aspectRatio": 1.7777777777777777,
+          }
+        }
+        testID="review-image"
+      >
+        <Image
+          accessibilityLabel="review-image"
+          defaultSource=""
+          onError={[Function]}
+          resizeMode="contain"
+          source={
+            {
+              "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+            }
+          }
+          style={
+            {
+              "aspectRatio": 1.7777777777777777,
+            }
+          }
+          testID="review-image"
+        />
+      </Image>
+    </View>
+  </View>
+</Image>
+`;
+
+exports[`<Image /> component props should render an image with aspect ratio should render an image with 1:1 aspect ratio 1`] = `
+<View
+  style={
+    {
+      "width": "100%",
+    }
+  }
+>
+  <Image
+    accessibilityLabel={null}
+    defaultSource=""
+    onError={[Function]}
+    resizeMode="contain"
+    source={
+      {
+        "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+      }
+    }
+    style={
+      {
+        "aspectRatio": 1,
+      }
+    }
+    testID={null}
+  />
+</View>
+`;
+
+exports[`<Image /> component props should render an image with aspect ratio should render an image with 4:3 aspect ratio 1`] = `
+<View
+  style={
+    {
+      "width": "100%",
+    }
+  }
+>
+  <Image
+    accessibilityLabel={null}
+    defaultSource=""
+    onError={[Function]}
+    resizeMode="contain"
+    source={
+      {
+        "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+      }
+    }
+    style={
+      {
+        "aspectRatio": 1.3333333333333333,
+      }
+    }
+    testID={null}
+  />
+</View>
+`;
+
+exports[`<Image /> component props should render an image with aspect ratio should render an image with 16:9 aspect ratio 1`] = `
+<View
+  style={
+    {
+      "width": "100%",
+    }
+  }
+>
+  <Image
+    accessibilityLabel={null}
+    defaultSource=""
+    onError={[Function]}
+    resizeMode="contain"
+    source={
+      {
+        "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+      }
+    }
+    style={
+      {
+        "aspectRatio": 1.7777777777777777,
+      }
+    }
+    testID={null}
+  />
+</View>
+`;
+
+exports[`<Image /> component props should render an image with aspect ratio should render an image with 21:9 aspect ratio 1`] = `
+<View
+  style={
+    {
+      "width": "100%",
+    }
+  }
+>
+  <Image
+    accessibilityLabel={null}
+    defaultSource=""
+    onError={[Function]}
+    resizeMode="contain"
+    source={
+      {
+        "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+      }
+    }
+    style={
+      {
+        "aspectRatio": 2.3333333333333335,
+      }
+    }
+    testID={null}
+  />
+</View>
+`;
+
+exports[`<Image /> component props should render placeholder image with defaultSource prop 1`] = `
+<Image
+  aspectRatio="16:9"
+  defaultSrc=""
+  placeholderSrc="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+  src=""
+>
+  <View
+    style={
+      {
+        "width": "100%",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Image
+        accessibilityLabel={null}
+        defaultSource=""
+        onError={[Function]}
+        resizeMode="contain"
+        source={
+          {
+            "uri": "https://imgd.aeplcdn.com/0x0/no-image/no-image.png",
+          }
+        }
+        style={
+          {
+            "aspectRatio": 1.7777777777777777,
+          }
+        }
+        testID={null}
+      >
+        <Image
+          accessibilityLabel={null}
+          defaultSource=""
+          onError={[Function]}
+          resizeMode="contain"
+          source={
+            {
+              "uri": "https://imgd.aeplcdn.com/0x0/no-image/no-image.png",
+            }
+          }
+          style={
+            {
+              "aspectRatio": 1.7777777777777777,
+            }
+          }
+          testID={null}
+        />
+      </Image>
+    </View>
+  </View>
+</Image>
+`;
+
+exports[`<Image /> render should render an image 1`] = `
+<Image
+  aspectRatio="16:9"
+  defaultSrc=""
+  placeholderSrc="https://imgd.aeplcdn.com/0x0/no-image/no-image.png"
+  src="https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80"
+>
+  <View
+    style={
+      {
+        "width": "100%",
+      }
+    }
+  >
+    <View
+      style={
+        {
+          "width": "100%",
+        }
+      }
+    >
+      <Image
+        accessibilityLabel={null}
+        defaultSource=""
+        onError={[Function]}
+        resizeMode="contain"
+        source={
+          {
+            "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+          }
+        }
+        style={
+          {
+            "aspectRatio": 1.7777777777777777,
+          }
+        }
+        testID={null}
+      >
+        <Image
+          accessibilityLabel={null}
+          defaultSource=""
+          onError={[Function]}
+          resizeMode="contain"
+          source={
+            {
+              "uri": "https://imgd.aeplcdn.com/1056x594/cw/ec/36265/Porsche-Macan-Exterior-161084.jpg?wm=0&q=80",
+            }
+          }
+          style={
+            {
+              "aspectRatio": 1.7777777777777777,
+            }
+          }
+          testID={null}
+        />
+      </Image>
+    </View>
+  </View>
+</Image>
+`;
