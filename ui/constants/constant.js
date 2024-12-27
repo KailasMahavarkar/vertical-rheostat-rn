@@ -1,0 +1,18 @@
+const CONSTANTS = (() => {
+    const DRAGGABLE_PADDING = 16;
+    const DRAGGABLE_ICON_SIZE = 16; // -> since sm size icon is used
+    return {
+        OFFSET: 8,
+        BUTTON_RADIUS: 50,
+        BLUR_ANIMATION_DURATION: 300,
+        DRAGGABLE_PADDING,
+        DRAGGABLE_COLLAPSED_WIDTH: DRAGGABLE_PADDING * 2 + DRAGGABLE_ICON_SIZE,
+        DRAGGABLE_ICON_SIZE,
+        CLOSE_BTN_TOP_ANIMATION_DURATION: 400,
+        CLOSE_BTN_SIZE: 50,
+        ICON_HITSLOP: 10,
+        AUTOCOMPLETE_ICON_HITSLOP: 20,
+    };
+})();
+
+export default CONSTANTS;

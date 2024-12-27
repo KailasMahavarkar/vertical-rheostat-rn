@@ -82,6 +82,10 @@ const propTypes = {
 	tabNavBgColor: PropTypes.oneOf(["white", "transparent"]),
 	/** Value for data testing attribute. */
 	"data-testing-id": PropTypes.string.isRequired,
+    
+    shouldRenderContainer: PropTypes.bool,
+
+    shouldRenderNavList: PropTypes.bool,
 };
 
 const defaultProps = {
@@ -95,6 +99,8 @@ const defaultProps = {
 	tabNavBgColor: "white",
 	listContentContainerStyle: null,
 	scrollableContainerAnimatedRef: null,
+    shouldRenderContainer: true,
+    shouldRenderNavList: true,
 };
 
 const getScrollSpyListStyles = (styleType, tabNavBgColor) => {
@@ -462,8 +468,12 @@ const ScrollSpy = (props) => {
 			ref={tabRef}
 			{...tabsProps}
 		>
-			{renderNavList()}
-			{renderContainer}
+            {
+                props.shouldRenderNavList && renderNavList()
+            }
+            {
+                props.shouldRenderContainer && renderContainer
+            }
 		</View>
 	);
 };

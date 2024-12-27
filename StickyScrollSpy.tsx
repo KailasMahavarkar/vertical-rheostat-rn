@@ -1,281 +1,98 @@
-import React, { Component } from 'react';
+import React from 'react';
 import {
     View,
     Text,
     ScrollView,
-    TouchableOpacity,
-    StyleSheet,
 } from 'react-native';
 
-import ScrollSpy from "./ui/ScrollSpy"
 
-const textTransformLabel = 'textTransform';
-const textTransformOptions = {
-    lowercase: 'lowercase',
-    capitalize: 'capitalize',
-    uppercase: 'uppercase',
-};
-const textTransformDefaultValue = textTransformOptions.uppercase;
+import useScrollSpy from './ui/hooks/useScrollSpy';
+import Animated from 'react-native-reanimated';
 
-const styleTypeLabel = 'styleType';
-const styleTypeOptions = {
-    default: 'default',
-    pill: 'pill',
-};
-const styleTypeDefaultValue = styleTypeOptions.default;
 
-let scrollContainerRef = React.createRef();
+const NestedScrollSpy = () => {
+    const {
+        activeIndex: parentActiveIndex,
+        handleScroll: handleParentScroll,
+        TabList: ParentTabList,
+        Section: ParentSection,
+        contentRef: parentContentRef,
+    } = useScrollSpy({
+        threshold: 50,
+        onActiveIndexChange: (index) => console.log('Parent section:', index),
+        tabNavBgColor: '#e0e0e0',
+        styleType: 'pill',
+        isNested: false
+    });
 
-// let scrollEvent = new Emitter();
+    const {
+        activeIndex: childActiveIndex,
+        handleScroll: handleChildScroll,
+        TabList: ChildTabList,
+        Section: ChildSection,
+        contentRef: childContentRef,
+    } = useScrollSpy({
+        threshold: 50,
+        onActiveIndexChange: (index) => console.log('Child section:', index),
+        tabNavBgColor: '#e0e0e0',
+        styleType: 'pill',
+        isNested: true // Mark as nested
+    });
 
-const styles = StyleSheet.create({
-    customListStyle: {
-        borderWidth: 3,
-        borderStyle: 'solid',
-        borderColor: 'red',
-    },
-    stickyScrollspyStyle: {
-        position: 'absolute',
-        top: 0,
-        zIndex: 1,
-    },
-});
-export default class StickyScrollspy extends Component {
-    constructor(props) {
-        super(props);
+    const parentSections = [
+        { title: 'Section 0', content: 'Content 0' },
+        { title: 'Section 1', content: 'Content 1' },
+        { title: 'Section 2', content: 'Content 2' },
+    ];
 
-        this.state = {
-            isFixed: false,
-            dynamicHeight: 200,
-            shouldShowPane: true,
-        };
-        this.userScroll = React.createRef(false);
-    }
+    const childSections = [
+        { title: 'Nested 0', content: 'Nested Content 0' },
+        { title: 'Nested 1', content: 'Nested Content 1' },
+        { title: 'Nested 2', content: 'Nested Content 2' },
+    ];
 
-    handleScroll = event => {
-        if (!this.userScroll.current) return;
-        if (event.nativeEvent.contentOffset.y > 100) {
-            this.setState({ isFixed: true });
-        } else {
-            this.setState({ isFixed: false });
-        }
-        // scrollEvent.emit('scrollSpyScroll', event);
-    };
+    return (
+        <Animated.ScrollView
+            ref={parentContentRef}
+            onScroll={handleParentScroll}
+            scrollEventThrottle={16}
+            stickyHeaderIndices={[0]}
+            nestedScrollEnabled={true} // Enable nested scrolling
+        >
+            <ParentTabList items={parentSections} />
 
-    render() {
-        return (
-            <View>
-                {this.state.isFixed && (
-                    <ScrollView style={[styles.stickyScrollspyStyle]}>
-                        <ScrollSpy
-                            type="sticky"
-                            styleType={styleTypeDefaultValue}
-                            textTransform={textTransformDefaultValue}
-                            // onScrollEmitter={scrollEvent}
-                            onScrollSpyScroll={(x, y, z) => {
-                                console.log({
-                                    x, y, z
-                                })
-                            }}
+            {parentSections.map((section, index) => (
+                <ParentSection key={index} index={index}>
+                    {index === 1 ? (
+                        <Animated.ScrollView
+                            ref={childContentRef}
+                            onScroll={handleChildScroll}
+                            scrollEventThrottle={16}
+                            stickyHeaderIndices={[0]}
+                            nestedScrollEnabled={true}
+                            style={{ maxHeight: 600 }} // Constrain height of nested scroll view
                         >
-                            <ScrollSpy.Pane
-                                title="title1"
-                                onTabClick={(event, index) => {
-                                    // scrollEvent.emit(
-                                    //     'onStickyTabChange',
-                                    //     index
-                                    // );
-                                }}
-                                active
-                            />
-                            <ScrollSpy.Pane
-                                title="title2"
-                                onTabClick={(event, index) => {
-                                    // scrollEvent.emit(
-                                    //     'onStickyTabChange',
-                                    //     index
-                                    // );
-                                }}
-                            />
-                            {this.state.shouldShowPane && (
-                                <ScrollSpy.Pane
-                                    title="title3"
-                                    onTabClick={(event, index) => {
-                                        // scrollEvent.emit(
-                                        //     'onStickyTabChange',
-                                        //     index
-                                        // );
-                                    }}
-                                />
-                            )}
-                            <ScrollSpy.Pane
-                                title="Title4"
-                                onTabClick={(event, index) => {
-                                    // scrollEvent.emit(
-                                    //     'onStickyTabChange',
-                                    //     index
-                                    // );
-                                }}
-                            />
-                            <ScrollSpy.Pane
-                                title="Title5"
-                                onTabClick={(event, index) => {
-                                    // scrollEvent.emit(
-                                    //     'onStickyTabChange',
-                                    //     index
-                                    // );
-                                }}
-                            />
-                            <ScrollSpy.Pane
-                                title="Title6"
-                                onTabClick={(event, index) => {
-                                    // scrollEvent.emit(
-                                    //     'onStickyTabChange',
-                                    //     index
-                                    // );
-                                }}
-                            />
-                            <ScrollSpy.Pane
-                                title="Title7"
-                                onTabClick={(event, index) => {
-                                    // scrollEvent.emit(
-                                    //     'onStickyTabChange',
-                                    //     index
-                                    // );
-                                }}
-                            />
-                        </ScrollSpy>
-                    </ScrollView>
-                )}
+                            <ChildTabList items={childSections} />
 
-                <ScrollView
-                    customListStyle={[styles.customListStyle]}
-                    ref={scrollContainerRef}
-                    style={{ height: 500, backgroundColor: '#efefef' }}
-                    onScroll={this.handleScroll}
-                    onScrollBeginDrag={() => {
-                        this.userScroll.current = true;
-                    }}
-                    onMomentumScrollEnd={() => {
-                        this.userScroll.current = false;
-                    }}
-                    scrollEventThrottle={50}
-                >
-                    <ScrollSpy
-                        scrollableContainer={scrollContainerRef}
-                        textTransform={textTransformDefaultValue}
-                        handleDisabledClick={index =>
-                            console.log('handleDisabledClick called', index)
-                        }
-                        styleType={styleTypeDefaultValue}
-                        onTabSwitch={index => {
-                            // scrollEvent.emit('onTabSwitch', index);
-                        }}
-                        threshold={46}
-                        // onScrollEmitter={scrollEvent}
-                        shouldStick={false}
-                    >
-                        <ScrollSpy.Pane
-                            link="#"
-                            title="title1"
-                            active
-                            onTabClick={(event, index) => {
-                                // scrollEvent.emit('onTabSwitch', index);
-                            }}
-                            style={{ height: 400, backgroundColor: 'red' }}
-                        >
-                            <Text>Content 1</Text>
-                        </ScrollSpy.Pane>
-                        <ScrollSpy.Pane
-                            title="title2"
-                            style={{
-                                height: this.state.dynamicHeight,
-                                backgroundColor: 'green',
-                            }}
-                            onTabClick={(event, index) => {
-                                // scrollEvent.emit('onTabSwitch', index);
-                            }}
-                        >
-                            <Text>Content 2</Text>
-                        </ScrollSpy.Pane>
-                        <View style={{ height: 100 }}>
-                            <Text>Custom Node 1</Text>
+                            {childSections.map((childSection, childIndex) => (
+                                <ChildSection key={childIndex} index={childIndex}>
+                                    <View style={{ height: 300 }}>
+                                        <Text>{childSection.content}</Text>
+                                    </View>
+                                </ChildSection>
+                            ))}
+                        </Animated.ScrollView>
+                    ) : (
+                        <View style={{ height: 500 }}>
+                            <Text>{section.content}</Text>
                         </View>
-                        {this.state.shouldShowPane && (
-                            <ScrollSpy.Pane
-                                title="title3"
-                                style={{ height: 300, backgroundColor: 'blue' }}
-                                onTabClick={(event, index) => {
-                                    // scrollEvent.emit('onTabSwitch', index);
-                                }}
-                            >
-                                <Text>Content 3</Text>
-                            </ScrollSpy.Pane>
-                        )}
-                        <ScrollSpy.Pane
-                            title="Title4"
-                            style={{ height: 300, backgroundColor: 'yellow' }}
-                            onTabClick={(event, index) => {
-                                // scrollEvent.emit('onTabSwitch', index);
-                            }}
-                        >
-                            <Text>Content 4</Text>
-                        </ScrollSpy.Pane>
-                        <View style={{ height: 100 }}>
-                            <Text>Custom Node 2</Text>
-                        </View>
-                        <ScrollSpy.Pane
-                            title="Title5"
-                            style={{ height: 300, backgroundColor: 'cyan' }}
-                            onTabClick={(event, index) => {
-                                // scrollEvent.emit('onTabSwitch', index);
-                            }}
-                        >
-                            <Text>Content 5</Text>
-                        </ScrollSpy.Pane>
-                        <ScrollSpy.Pane
-                            title="Title6"
-                            style={{ height: 300, backgroundColor: 'red' }}
-                            onTabClick={(event, index) => {
-                                // scrollEvent.emit('onTabSwitch', index);
-                            }}
-                        >
-                            <Text>Content 6</Text>
-                        </ScrollSpy.Pane>
-                        <ScrollSpy.Pane
-                            title="Title7"
-                            style={{ height: 300, backgroundColor: 'green' }}
-                            onTabClick={(event, index) => {
-                                // scrollEvent.emit('onTabSwitch', index);
-                            }}
-                        >
-                            <Text>Content 7</Text>
-                        </ScrollSpy.Pane>
-                    </ScrollSpy>
-                    <View style={{ height: 500 }}></View>
-                </ScrollView>
-                <View style={{ height: 100 }}></View>
-                <TouchableOpacity
-                    onPress={() =>
-                        this.setState({
-                            dynamicHeight: 400,
-                            shouldShowPane: false,
-                        })
-                    }
-                >
-                    <Text
-                        style={{
-                            padding: 5,
-                            borderWidth: 1,
-                            borderColor: '#000',
-                            borderStyle: 'solid',
-                        }}
-                    >
-                        Press here to increase height of pane 2 and remove pane
-                        3
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
-}
+                    )}
+                </ParentSection>
+            ))}
+
+            <View style={{ height: 300 }} />
+        </Animated.ScrollView>
+    );
+};
+
+export default NestedScrollSpy;
