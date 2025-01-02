@@ -19,25 +19,11 @@ const NestedScrollSpy = () => {
         contentRef: parentContentRef,
     } = useScrollSpy({
         threshold: 50,
-        onActiveIndexChange: (index) => console.log('Parent section:', index),
+        // onActiveIndexChange: (index: any) => console.log('Parent section:', index),
         tabNavBgColor: '#e0e0e0',
         styleType: 'pill',
-        isNested: false
     });
 
-    const {
-        activeIndex: childActiveIndex,
-        handleScroll: handleChildScroll,
-        TabList: ChildTabList,
-        Section: ChildSection,
-        contentRef: childContentRef,
-    } = useScrollSpy({
-        threshold: 50,
-        onActiveIndexChange: (index) => console.log('Child section:', index),
-        tabNavBgColor: '#e0e0e0',
-        styleType: 'pill',
-        isNested: true // Mark as nested
-    });
 
     const parentSections = [
         { title: 'Section 0', content: 'Content 0' },
@@ -45,53 +31,51 @@ const NestedScrollSpy = () => {
         { title: 'Section 2', content: 'Content 2' },
     ];
 
-    const childSections = [
-        { title: 'Nested 0', content: 'Nested Content 0' },
-        { title: 'Nested 1', content: 'Nested Content 1' },
-        { title: 'Nested 2', content: 'Nested Content 2' },
-    ];
-
     return (
-        <Animated.ScrollView
-            ref={parentContentRef}
-            onScroll={handleParentScroll}
-            scrollEventThrottle={16}
-            stickyHeaderIndices={[0]}
-            nestedScrollEnabled={true} // Enable nested scrolling
-        >
-            <ParentTabList items={parentSections} />
+        <>
+            <View style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                backgroundColor: 'pink',
+                zIndex: 10
+            }}>
+                <Text>Parent Active Index: {parentActiveIndex}</Text>
+            </View>
+            <Animated.ScrollView
+                ref={parentContentRef}
+                onScroll={handleParentScroll}
+                stickyHeaderIndices={[0]}
+                nestedScrollEnabled={true}
+                style={{
+                    flex: 1,
+                    backgroundColor: '#f0f0f0',
+                    width: '100%',
+                    overflow: 'hidden',
+                }}
+            >
+                <ParentTabList items={parentSections} />
 
-            {parentSections.map((section, index) => (
-                <ParentSection key={index} index={index}>
-                    {index === 1 ? (
-                        <Animated.ScrollView
-                            ref={childContentRef}
-                            onScroll={handleChildScroll}
-                            scrollEventThrottle={16}
-                            stickyHeaderIndices={[0]}
-                            nestedScrollEnabled={true}
-                            style={{ maxHeight: 600 }} // Constrain height of nested scroll view
-                        >
-                            <ChildTabList items={childSections} />
 
-                            {childSections.map((childSection, childIndex) => (
-                                <ChildSection key={childIndex} index={childIndex}>
-                                    <View style={{ height: 300 }}>
-                                        <Text>{childSection.content}</Text>
-                                    </View>
-                                </ChildSection>
-                            ))}
-                        </Animated.ScrollView>
-                    ) : (
-                        <View style={{ height: 500 }}>
+
+                {parentSections.map((section, index) => (
+                    <ParentSection key={index} index={index}>
+                        <View
+                            style={{
+                                height: 500,
+                                backgroundColor: ['red', 'green', 'blue'][index % 3],
+                                color: ['white', 'black', 'white'][index % 3],
+                            }}>
                             <Text>{section.content}</Text>
                         </View>
-                    )}
-                </ParentSection>
-            ))}
+                    </ParentSection>
+                ))}
 
-            <View style={{ height: 300 }} />
-        </Animated.ScrollView>
+                <View style={{ height: 300 }} />
+
+            </Animated.ScrollView>
+        </>
+
     );
 };
 
