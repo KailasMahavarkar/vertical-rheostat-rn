@@ -105,12 +105,64 @@ export function getClosestIndex(array, target) {
 
     return {
         index: leftDiff < rightDiff ? left : right,
-        value: leftDiff < rightDiff ? leftValue : rightValue
+        value: leftDiff < rightDiff ? leftValue : rightValue,
     };
 }
 
 
-const panePoints = panes.map((x) => Number(Number(x[1].y).toFixed(0)));
-const ci = getClosestIndex(panePoints, 296);
-console.log("closest index -->", ci);
-console.log("panePoints --> ", panePoints);
+// const panePoints = panes.map((x) => Number(Number(x[1].y).toFixed(0)));
+// const ci = getClosestIndex(panePoints, 296);
+// console.log("closest index -->", ci);
+// console.log("panePoints --> ", panePoints);
+
+function getTooltipLabels(topValue = 0, bottomValue = 0, tooltipTopTextSuffix = '', tooltipBottomTextSuffix = '', maxRange = 0) {
+    let tooltipTopLen = tooltipTopTextSuffix.length;
+    let tooltipBottomLen = tooltipBottomTextSuffix.length;
+
+    let topSpaceCount = 0;
+    let bottomSpaceCount = 0;
+
+    const lenDiff = Math.max(0, Math.abs(tooltipTopLen - tooltipBottomLen));
+    if (tooltipTopLen < tooltipBottomLen) {
+        topSpaceCount += lenDiff;
+        tooltipTopTextSuffix += '0'.repeat(lenDiff);
+    } else {
+        bottomSpaceCount += lenDiff;
+        tooltipBottomTextSuffix += '0'.repeat(lenDiff);
+    }
+
+    const maxRangeLen = maxRange.toString().length;
+    const topLenDiff = Math.max(0, maxRangeLen - topValue.toString().length);
+    const bottomLenDiff = Math.max(0, maxRangeLen - bottomValue.toString().length);
+
+    topSpaceCount += topLenDiff;
+    bottomSpaceCount += bottomLenDiff;
+
+    const topLabelText = `${topValue} ${tooltipBottomTextSuffix}`;
+    const bottomLabelText = `${bottomValue} ${tooltipBottomTextSuffix}`;
+
+    return {
+        topLabelSpaceCount: topSpaceCount,
+        bottomLabelSpacesCount: bottomSpaceCount,
+        topLabelText,
+        bottomLabelText,
+    };
+}
+
+const topValue = 100;
+const bottomValue = 50000;
+const maxRange = 100000;
+
+let tooltipTopTextSuffix = " cro";
+let tooltipBottomTextSuffix = " lakh";
+
+const { topLabelText, bottomLabelText } = getTooltipLabels(
+    topValue,
+    bottomValue,
+    tooltipTopTextSuffix,
+    tooltipBottomTextSuffix,
+    maxRange,
+);
+
+console.log(`__${topLabelText}__`);
+console.log(`__${bottomLabelText}__`);

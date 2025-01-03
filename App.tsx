@@ -16,21 +16,17 @@ function Label({ text }) {
 }
 
 function App(): React.JSX.Element {
-    const maxValue = 450;
-    const minValue = 400;
+    const maxValue = 1000;
+    const minValue = 0;
 
-    const [topValue, setTopValue] = useState(449);
-    const [bottomValue, setBottomValue] = useState(400);
+    const [topValue, setTopValue] = useState(maxValue);
+    const [bottomValue, setBottomValue] = useState(minValue);
     const [pressed, setPressed] = useState(true);
 
     const backgroundStyle = {
         backgroundColor: 'black',
     };
 
-    console.log({
-        topValue,
-        bottomValue,
-    })
 
     return <SafeAreaView style={backgroundStyle} >
         <View
@@ -55,23 +51,22 @@ function App(): React.JSX.Element {
                 tooltipBottomTextSuffix=" lakh"
                 minRange={minValue}
                 maxRange={maxValue}
-                algorithm={linearAlgorithm}
+                algorithm={log10Algorithm}
 
                 topLabel={<Label text="Top Label" />}
                 bottomLabel={<Label text="Bottom Label" />}
 
                 showSnapLines={true}
-                shouldSnap={false}
-                snappingPoints={[minValue, 100, 200, 300, 400, 500, 600, 700, 800, 900, maxValue]}
-
+                snap={true}
+                shouldShowMarkings={true}
+                snapPoints={[minValue, 100, 200, 300, 400, 500, 600, 700, 800, maxValue]}
                 topHandleValue={topValue}
                 bottomHandleValue={bottomValue}
-                floatPrecision={3}
-
                 onSliderMove={(panType, stateValues, event, gesture) => {
-                    console.log("slider state: ", console.log(JSON.stringify(stateValues, null , 2)));
+                    console.log({
+                        stateValues
+                    })
                 }}
-
                 labelStyles={{
                     backgroundColor: 'yellow',
                 }}
@@ -81,8 +76,8 @@ function App(): React.JSX.Element {
             <Pressable
                 onPress={() => {
                     if (pressed) {
-                        setTopValue(600);
-                        setBottomValue(200);
+                        setTopValue(415);
+                        setBottomValue(410);
                     } else {
                         setTopValue(maxValue);
                         setBottomValue(minValue);

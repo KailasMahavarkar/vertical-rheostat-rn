@@ -1,11 +1,6 @@
-import React, {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, Text, Animated, PanResponder } from 'react-native';
-import theme from "./theme";
+import theme from './theme';
 import PropTypes from 'prop-types';
 import { linearAlgorithm } from './algorithm';
 import {
@@ -42,8 +37,10 @@ const propTypes = {
     rheostatHeight: PropTypes.number.isRequired,
     /* The snapping points (should be valid number between minRange and maxRange inclusive) */
     snapPoints: PropTypes.arrayOf(PropTypes.number),
-    /* The suffix of the tooltip text */
-    tooltipTextSuffix: PropTypes.string,
+    /* The suffix of the top tooltip text */
+    tooltipTopTextSuffix: PropTypes.string,
+    /* The suffix of the bottom tooltip text */
+    tooltipBottomTextSuffix: PropTypes.string,
     /* The position of the tooltip */
     tooltipPosition: PropTypes.string,
     /* The show snap lines */
@@ -123,12 +120,78 @@ const styles = StyleSheet.create({
     },
 });
 
+
+function getSnappingPointsWithinRange(snapPoints, minRange, maxRange, algorithm) {
+    const pointSet = new Set();
+    const reducedPoints = [];
+
+    for (let i = 0; i < snapPoints.length; i++) {
+        // clamp the point to the min and max range
+        const clampValue = clampRange(snapPoints[i], minRange, maxRange);
+
+        // check if value in pointSet we don't want to add duplicates
+        if (pointSet.has(clampValue)) {
+            continue;
+        }
+
+        if (clampValue >= minRange && clampValue <= maxRange) {
+            pointSet.add(clampValue);
+            reducedPoints.push(clampValue);
+        }
+    }
+
+    // we iterate over the reduced snapPoints array and find its percentage value
+    const snappingPercentageArray = reducedPoints.map(point =>
+        algorithm.getPosition(point, minRange, maxRange)
+    );
+
+    return {
+        snappingPoints: reducedPoints,
+        snappingPercentageArray,
+    };
+}
+
+function getTooltipLabels(topValue = 0, bottomValue = 0, tooltipTopTextSuffix = '', tooltipBottomTextSuffix = '', maxRange = 0) {
+    topValue = Number(topValue.toFixed(0));
+    bottomValue = Number(bottomValue.toFixed(0));
+
+    let tooltipTopLen = tooltipTopTextSuffix.length;
+    let tooltipBottomLen = tooltipBottomTextSuffix.length;
+
+    let topSpaceCount = 0;
+    let bottomSpaceCount = 0;
+
+    const lenDiff = Math.max(0, Math.abs(tooltipTopLen - tooltipBottomLen));
+    if (tooltipTopLen < tooltipBottomLen) {
+        topSpaceCount += lenDiff;
+    } else {
+        bottomSpaceCount += lenDiff;
+    }
+
+    const maxRangeLen = maxRange.toString().length;
+    const topLenDiff = Math.max(0, maxRangeLen - topValue.toString().length);
+    const bottomLenDiff = Math.max(0, maxRangeLen - bottomValue.toString().length);
+
+    topSpaceCount += topLenDiff;
+    bottomSpaceCount += bottomLenDiff;
+
+    const topLabelText = `${topValue}${tooltipTopTextSuffix}`;
+    const bottomLabelText = `${bottomValue}${tooltipBottomTextSuffix}`;
+
+    return {
+        topLabelSpaceCount: topSpaceCount,
+        bottomLabelSpacesCount: bottomSpaceCount,
+        topLabelText,
+        bottomLabelText,
+    };
+}
+
+
 function ToolTip({
-    value = 0,
+    text = '',
+    spaces = 0,
     sliderSize = 24,
     position = 'left',
-    suffix = '',
-    diff = 0,
 }) {
     const dynamicStyles = StyleSheet.create({
         tooltipTop: {
@@ -149,20 +212,20 @@ function ToolTip({
         },
     ];
 
-    const isLeft = position === 'left' && diff > 0;
+    const isLeft = position === 'left';
 
     return (
         <Animated.View style={dynamicStyles.tooltipTop}>
             <Text style={styles.toolTipText}>
                 {isLeft && (
                     <Text style={styles.tooltipTransparentText}>
-                        {'0'.repeat(Math.max(diff, 0))}
+                        {'0'.repeat(spaces)}
                     </Text>
                 )}
-                {`${Number(value.toString()).toFixed(0)} ${suffix}`}
+                {text}
                 {!isLeft && (
                     <Text style={styles.tooltipTransparentText}>
-                        {'0'.repeat(Math.max(diff, 0))}
+                        {'0'.repeat(spaces)}
                     </Text>
                 )}
             </Text>
@@ -197,30 +260,37 @@ function VerticalRheostat({
     const animatedOffsetTop = useRef(new Animated.Value(0)).current;
     const animatedOffsetBottom = useRef(new Animated.Value(0)).current;
     const [currentTopValue, setCurrentTopValue] = useState(topHandleValue);
-    const [currentBottomValue, setCurrentBottomValue] = useState(
-        bottomHandleValue
-    );
+    const [currentBottomValue, setCurrentBottomValue] = useState(bottomHandleValue);
     const [filledBarHeight, setFilledBarHeight] = useState(0);
     const [activeHandle, setActiveHandle] = useState('top');
     const [isDragging, setIsDragging] = useState(false);
     const lastOffsetTop = useRef(0);
     const lastOffsetBottom = useRef(0);
-    const snappingPercentageArray = useMemo(
-        () =>
-            snapPoints.map(point =>
-                algorithm.getPosition(point, minRange, maxRange)
-            ),
-        [algorithm, maxRange, minRange, snapPoints]
-    );
+
+    const { snappingPoints, snappingPercentageArray } = useMemo(() => getSnappingPointsWithinRange(
+        snapPoints,
+        minRange,
+        maxRange,
+        algorithm
+    ), [algorithm, maxRange, minRange, snapPoints]);
 
     const getValues = () => {
         const topOffset = animatedOffsetTop.__getValue();
         const bottomOffset = animatedOffsetBottom.__getValue();
-        const topFilledPercent = offsetToPercentage(rheostatSize, topOffset, 0, 100);
-        const bottomFilledPercent = offsetToPercentage(rheostatSize, bottomOffset, 0, 100);
+        const topFilledPercent = offsetToPercentage(rheostatSize, topOffset);
+        const bottomFilledPercent = offsetToPercentage(
+            rheostatSize,
+            bottomOffset
+        );
 
-        let topValue = Number((maxRange - (topFilledPercent * (maxRange - minRange)) / 100).toFixed(0));
-        let bottomValue = Number((minRange + (bottomFilledPercent * (maxRange - minRange)) / 100).toFixed(0));
+        let topValue = parseInt(
+            maxRange - (topFilledPercent * (maxRange - minRange)) / 100,
+            10
+        );
+        let bottomValue = parseInt(
+            minRange + (bottomFilledPercent * (maxRange - minRange)) / 100,
+            10
+        );
         topValue = Math.min(Math.max(topValue, minRange), maxRange);
         bottomValue = Math.max(Math.min(bottomValue, maxRange), minRange);
 
@@ -262,7 +332,7 @@ function VerticalRheostat({
         // re-calculate the filled bar height
         const { barFilledPercent } = getValues();
         setFilledBarHeight(
-            percentToRheostatSize(rheostatSize, barFilledPercent, 0, 100)
+            percentToRheostatSize(rheostatSize, barFilledPercent)
         );
     }, [bottomHandleValue]);
 
@@ -284,8 +354,7 @@ function VerticalRheostat({
         );
     }, [topHandleValue]);
 
-
-    const getClampOffsetTop = (offset) => {
+    const getClampOffsetTop = offset => {
         const { bottomOffset } = getValues();
         const clampOffset = clampRange(
             offset,
@@ -338,9 +407,6 @@ function VerticalRheostat({
         const values = getValues();
         const { topOffset, bottomOffset } = values;
 
-        let newTopValue = currentTopValue;
-        let newBottomValue = currentBottomValue;
-
 
         if (snap) {
             const topHandlePercentage = offsetToPercentage(
@@ -370,8 +436,8 @@ function VerticalRheostat({
                     snappingPercentageArray[clampIndex]
                 );
                 animatedOffsetTop.setValue(rheostatSize - offset);
-                newTopValue = snapPoints[clampIndex];
-                setCurrentTopValue(newTopValue);
+                const selectedTopValue = snappingPoints[clampIndex];
+                setCurrentTopValue(selectedTopValue);
             } else {
                 const clampIndex = Math.min(
                     closestTopIndex.index - 1,
@@ -382,10 +448,12 @@ function VerticalRheostat({
                     snappingPercentageArray[clampIndex]
                 );
                 animatedOffsetBottom.setValue(-offset);
-                newBottomValue = snapPoints[clampIndex];
-                setCurrentBottomValue(newBottomValue);
+                const selectedBottomValue = snappingPoints[clampIndex];
+                setCurrentBottomValue(selectedBottomValue);
             }
-        } else {
+        }
+
+        if (!snap) {
             // Handle continuous (non-snapping) movement
             if (isPanTop) {
                 const newOffset = offsetToRheostatSize(
@@ -394,9 +462,13 @@ function VerticalRheostat({
                 );
                 const percentage = offsetToPercentage(rheostatSize, newOffset);
                 // For top handle, we invert the percentage since it moves from top to bottom
-                newTopValue = maxRange - (percentage * (maxRange - minRange)) / 100;
-                newTopValue = Math.min(Math.max(newTopValue, minRange), maxRange);
-                setCurrentTopValue(newTopValue);
+                let selectedTopValue =
+                    maxRange - (percentage * (maxRange - minRange)) / 100;
+                selectedTopValue = Math.min(
+                    Math.max(selectedTopValue, minRange),
+                    maxRange
+                );
+                setCurrentTopValue(selectedTopValue);
                 animatedOffsetTop.setValue(newOffset);
             } else {
                 const newOffset = -offsetToRheostatSize(
@@ -404,9 +476,13 @@ function VerticalRheostat({
                     getClampOffsetBottom(bottomOffset)
                 );
                 const percentage = offsetToPercentage(rheostatSize, newOffset);
-                newBottomValue = minRange + (percentage * (maxRange - minRange)) / 100;
-                newBottomValue = Math.max(Math.min(newBottomValue, maxRange), minRange);
-                setCurrentBottomValue(newBottomValue);
+                let selectedBottomValue =
+                    minRange + (percentage * (maxRange - minRange)) / 100;
+                selectedBottomValue = Math.max(
+                    Math.min(selectedBottomValue, maxRange),
+                    minRange
+                );
+                setCurrentBottomValue(selectedBottomValue);
                 animatedOffsetBottom.setValue(newOffset);
             }
         }
@@ -419,10 +495,14 @@ function VerticalRheostat({
             bottomOffset: updatedStateValues.bottomOffset,
         };
 
-        onSliderMove && onSliderMove(panType, updateValues, event, gestureState);
+        onSliderMove &&
+            onSliderMove(panType, updateValues, event, gestureState);
 
         setFilledBarHeight(
-            percentToRheostatSize(rheostatSize, updatedStateValues.barFilledPercent)
+            percentToRheostatSize(
+                rheostatSize,
+                updatedStateValues.barFilledPercent
+            )
         );
         setIsDragging(true);
     }
@@ -470,21 +550,19 @@ function VerticalRheostat({
 
     const panResponderTop = useRef(createPanResponder('top')).current;
     const panResponderBottom = useRef(createPanResponder('bottom')).current;
-    const maxWidthLength = maxRange.toString().length;
 
-    const topSuffixLength = tooltipTopTextSuffix.length;
-    const bottomSuffixLength = tooltipBottomTextSuffix.length;
-
-    const suffixDiff = Math.abs(bottomSuffixLength - topSuffixLength);
-    const isTopSuffixSmallerInLength = tooltipTopTextSuffix.length < tooltipBottomTextSuffix.length;
-
-    const topValueDiff =
-        maxWidthLength -
-        parseInt(currentTopValue.toString(), 10).toString().length + (isTopSuffixSmallerInLength ? suffixDiff : 0);
-
-    const bottomValueDiff =
-        maxWidthLength -
-        parseInt(currentBottomValue.toString(), 10).toString().length + (!isTopSuffixSmallerInLength ? suffixDiff : 0);
+    const {
+        topLabelText,
+        bottomLabelText,
+        topLabelSpaceCount,
+        bottomLabelSpacesCount,
+    } = getTooltipLabels(
+        currentTopValue,
+        currentBottomValue,
+        tooltipTopTextSuffix,
+        tooltipBottomTextSuffix,
+        maxRange
+    );
 
     const dynamicStyles = StyleSheet.create({
         filledBar: {
@@ -552,6 +630,7 @@ function VerticalRheostat({
                                     const width = 4 + (percentage / 100) * 12;
                                     const markPecentage = `${100 -
                                         percentage}%`;
+
                                     return (
                                         <View
                                             key={`${percentage}-${index}`}
@@ -560,7 +639,10 @@ function VerticalRheostat({
                                                 tooltipPosition === 'right'
                                                     ? dynamicStyles.snapbarPlacementRight
                                                     : dynamicStyles.snapbarPlacementLeft,
-                                                { width, top: parseFloat(markPecentage) },
+                                                {
+                                                    width,
+                                                    top: markPecentage,
+                                                },
                                             ]}
                                         />
                                     );
@@ -603,11 +685,10 @@ function VerticalRheostat({
                             ]}
                         >
                             <ToolTip
-                                value={currentTopValue}
                                 sliderSize={sliderSize}
                                 position={tooltipPosition}
-                                suffix={tooltipTopTextSuffix}
-                                diff={topValueDiff}
+                                spaces={topLabelSpaceCount}
+                                text={topLabelText}
                             />
                         </View>
                     </Animated.View>
@@ -639,11 +720,10 @@ function VerticalRheostat({
                             ]}
                         >
                             <ToolTip
-                                value={currentBottomValue}
                                 sliderSize={sliderSize}
                                 position={tooltipPosition}
-                                suffix={tooltipBottomTextSuffix}
-                                diff={bottomValueDiff}
+                                text={bottomLabelText}
+                                spaces={bottomLabelSpacesCount}
                             />
                         </View>
                     </Animated.View>
