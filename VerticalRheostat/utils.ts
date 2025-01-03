@@ -1,13 +1,16 @@
 import { linearAlgorithm } from './algorithm';
 
-// Convert the offset(distance) to a percentage
-export const offsetToPercentage = (rheostatSize, offset) => {
-    return (Math.abs(offset) / rheostatSize) * 100;
+// Convert the offset(distance) to a percentage within the full range
+export const offsetToPercentage = (rheostatSize, offset, minRange = 0, maxRange = 100) => {
+    const rawPercentage = (Math.abs(offset) / rheostatSize) * 100;
+    const rangeSize = maxRange - minRange;
+    return minRange + (rawPercentage * rangeSize) / 100;
 };
 
-// Convert the percentage to a rheostat size
-export const percentToRheostatSize = (rheostatSize, percent) => {
-    return Math.max(0, (rheostatSize * percent) / 100);
+// Convert the percentage to a rheostat size, accounting for the range
+export const percentToRheostatSize = (rheostatSize, percent, minRange = 0, maxRange = 100) => {
+    const normalizedPercent = ((percent - minRange) / (maxRange - minRange)) * 100;
+    return Math.max(0, (rheostatSize * normalizedPercent) / 100);
 };
 
 // Clamp the value between the min and max
@@ -15,10 +18,58 @@ export const clampRange = (value, min, max) => {
     return Math.min(Math.max(value, min), max);
 };
 
-// Convert the offset to a rheostat size
-export const offsetToRheostatSize = (rheostatSize, offset) => {
-    return percentToRheostatSize(rheostatSize, offsetToPercentage(rheostatSize, offset));
+// Convert the offset to a rheostat size, accounting for the range
+export const offsetToRheostatSize = (rheostatSize, offset, minRange = 0, maxRange = 100) => {
+    const percentage = offsetToPercentage(rheostatSize, offset, minRange, maxRange);
+    return percentToRheostatSize(rheostatSize, percentage, minRange, maxRange);
 };
+
+// function to get the closest index from an array
+export function getClosestIndex(array, target) {
+    if (array.length === 0) {
+        return { index: -1, value: 0 };
+    }
+
+    let left = 0;
+    let right = array.length - 1;
+
+    if (target <= array[0]) {
+        return { index: 0, value: array[0] };
+    }
+    if (target >= array[array.length - 1]) {
+        return { index: array.length - 1, value: array[array.length - 1] };
+    }
+
+    // Binary search to find the closest value
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+
+        if (array[mid] === target) {
+            return {
+                index: mid,
+                value: array[mid],
+            };
+        }
+
+        if (array[mid] < target) {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+
+    const leftValue = array[left];
+    const rightValue = array[right];
+
+    const leftDiff = Math.abs(leftValue - target);
+    const rightDiff = Math.abs(rightValue - target);
+
+    return {
+        index: leftDiff < rightDiff ? left : right,
+        value: leftDiff < rightDiff ? leftValue : rightValue
+    };
+}
+
 
 export function jslog(...args) {
     console.log(JSON.stringify(args, null, 2));

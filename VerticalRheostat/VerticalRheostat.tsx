@@ -161,7 +161,8 @@ function VerticalRheostat({
     rheostatWidth = 200,
     snappingPoints = [],
     rheostatHeight = 600,
-    tooltipTextSuffix = '',
+    tooltipTopTextSuffix = '',
+    tooltipBottomTextSuffix = '',
     tooltipPosition = 'left',
     showSnapLines = false,
     handleDelta = 20,
@@ -241,7 +242,7 @@ function VerticalRheostat({
         let clampOffsetTop;
         let clampOffsetBottom;
 
-        // set the offset based on the pan type (top or bottom) and apply boundary checks
+        // Handle either top or bottom pan gesture
         if (panType === 'top') {
             deltaTop = lastOffsetTop.current + gestureState.dy;
             clampOffsetTop = clampRange(deltaTop, 0, rheostatSize);
@@ -259,44 +260,52 @@ function VerticalRheostat({
         const { topOffset, bottomOffset } = getValues();
 
         if (shouldSnap) {
+            // Calculate percentages for both handles
             const topHandlePercentage = offsetToPercentage(rheostatSize, topOffset);
             const bottomHandlePercentage = offsetToPercentage(rheostatSize, -bottomOffset);
+
+            // Find closest snapping points
             const closestBottomIndex = getClosestIndex(
                 snappingPercentageArray,
                 bottomHandlePercentage,
             );
-
             const closestTopIndex = getClosestIndex(
                 snappingPercentageArray,
                 100 - topHandlePercentage,
             );
+
             if (panType === 'top') {
+                // Ensure top handle doesn't go below bottom handle
                 const clampIndex = Math.max(closestBottomIndex.index + 1, closestTopIndex.index);
                 const offset = percentToRheostatSize(rheostatSize, snappingPercentageArray[clampIndex]);
                 animatedOffsetTop.setValue(rheostatSize - offset);
                 setCurrentTopValue(snappingPoints[clampIndex]);
             } else {
+                // Ensure bottom handle doesn't go above top handle
                 const clampIndex = Math.min(closestTopIndex.index - 1, closestBottomIndex.index);
                 const offset = percentToRheostatSize(rheostatSize, snappingPercentageArray[clampIndex]);
-                animatedOffsetBottom.setValue(-1 * offset);
+                animatedOffsetBottom.setValue(-offset);
                 setCurrentBottomValue(snappingPoints[clampIndex]);
             }
         } else {
-            // clmap the offset to handle overlapping (top should not overlap bottom and vice versa)
+            // Handle continuous (non-snapping) movement
             if (panType === 'top') {
                 const newOffset = offsetToRheostatSize(rheostatSize, getClampOffsetTop(topOffset));
                 const percentage = offsetToPercentage(rheostatSize, newOffset);
-                const value = maxRange - (percentage * maxRange) / 100;
-                setCurrentTopValue(value);
+                // For top handle, we invert the percentage since it moves from top to bottom
+                const value = maxRange - (percentage * (maxRange - minRange)) / 100;
+                setCurrentTopValue(Math.min(Math.max(value, minRange), maxRange));
                 animatedOffsetTop.setValue(newOffset);
             } else {
                 const newOffset = -offsetToRheostatSize(rheostatSize, getClampOffsetBottom(bottomOffset));
                 const percentage = offsetToPercentage(rheostatSize, newOffset);
-                const value = (percentage * maxRange) / 100;
-                setCurrentBottomValue(value);
+                const value = minRange + (percentage * (maxRange - minRange)) / 100;
+                setCurrentBottomValue(Math.max(Math.min(value, maxRange), minRange));
                 animatedOffsetBottom.setValue(newOffset);
             }
         }
+
+        // Update the filled bar size
         const { barFilledPercent } = getValues();
         setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
         setIsDragging(true);
@@ -334,7 +343,7 @@ function VerticalRheostat({
         // re-calculate the filled bar height
         const { barFilledPercent } = getValues();
         setFilledBarHeight(percentToRheostatSize(rheostatSize, barFilledPercent));
-    }, [bottomHandleValue]);
+    }, [algorithm, animatedOffsetBottom, bottomHandleValue, getValues, maxRange, minRange, rheostatSize]);
 
     useEffect(() => {
         const percentage = algorithm.getPosition(topHandleValue, minRange, maxRange);
@@ -500,7 +509,7 @@ function VerticalRheostat({
                                 value={currentTopValue}
                                 handleSize={handleSize}
                                 position={tooltipPosition}
-                                suffix={tooltipTextSuffix}
+                                suffix={tooltipTopTextSuffix}
                                 diff={topValueDiff}
                                 floatPrecision={tooltipFloatPrecision}
                             />
@@ -544,7 +553,7 @@ function VerticalRheostat({
                                 value={currentBottomValue}
                                 handleSize={handleSize}
                                 position={tooltipPosition}
-                                suffix={tooltipTextSuffix}
+                                suffix={tooltipBottomTextSuffix}
                                 diff={bottomValueDiff}
                                 floatPrecision={tooltipFloatPrecision}
                             />
