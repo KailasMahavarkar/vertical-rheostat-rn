@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View, Text, Animated, PanResponder } from 'react-native';
+import { StyleSheet, View, Text, Animated, PanResponder, GestureResponderEvent, PanResponderGestureState, GestureResponderEvent, PanResponderGestureState, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 import theme from './theme';
 import PropTypes from 'prop-types';
 import { linearAlgorithm } from './algorithm';
@@ -120,8 +120,12 @@ const styles = StyleSheet.create({
     },
 });
 
-
-function getSnappingPointsWithinRange(snapPoints, minRange, maxRange, algorithm) {
+function getSnappingPointsWithinRange(
+    snapPoints: string | any[],
+    minRange: number,
+    maxRange: number,
+    algorithm: { getPosition: any; getValue?: (positionPercent: any, min: any, max: any) => any; }
+) {
     const pointSet = new Set();
     const reducedPoints = [];
 
@@ -130,13 +134,11 @@ function getSnappingPointsWithinRange(snapPoints, minRange, maxRange, algorithm)
         const clampValue = clampRange(snapPoints[i], minRange, maxRange);
 
         // check if value in pointSet we don't want to add duplicates
-        if (pointSet.has(clampValue)) {
-            continue;
-        }
-
-        if (clampValue >= minRange && clampValue <= maxRange) {
-            pointSet.add(clampValue);
-            reducedPoints.push(clampValue);
+        if (!pointSet.has(clampValue)) {
+            if (clampValue >= minRange && clampValue <= maxRange) {
+                pointSet.add(clampValue);
+                reducedPoints.push(clampValue);
+            }
         }
     }
 
@@ -151,12 +153,18 @@ function getSnappingPointsWithinRange(snapPoints, minRange, maxRange, algorithm)
     };
 }
 
-function getTooltipLabels(topValue = 0, bottomValue = 0, tooltipTopTextSuffix = '', tooltipBottomTextSuffix = '', maxRange = 0) {
-    topValue = Number(topValue.toFixed(0));
-    bottomValue = Number(bottomValue.toFixed(0));
+function getTooltipLabels(
+    topValue = 0,
+    bottomValue = 0,
+    tooltipTopTextSuffix = '',
+    tooltipBottomTextSuffix = '',
+    maxRange = 0
+) {
+    const topLabelValue = Number(topValue.toFixed(0));
+    const bottomLabelValue = Number(bottomValue.toFixed(0));
 
-    let tooltipTopLen = tooltipTopTextSuffix.length;
-    let tooltipBottomLen = tooltipBottomTextSuffix.length;
+    const tooltipTopLen = tooltipTopTextSuffix.length;
+    const tooltipBottomLen = tooltipBottomTextSuffix.length;
 
     let topSpaceCount = 0;
     let bottomSpaceCount = 0;
@@ -169,14 +177,20 @@ function getTooltipLabels(topValue = 0, bottomValue = 0, tooltipTopTextSuffix = 
     }
 
     const maxRangeLen = maxRange.toString().length;
-    const topLenDiff = Math.max(0, maxRangeLen - topValue.toString().length);
-    const bottomLenDiff = Math.max(0, maxRangeLen - bottomValue.toString().length);
+    const topLenDiff = Math.max(
+        0,
+        maxRangeLen - topLabelValue.toString().length
+    );
+    const bottomLenDiff = Math.max(
+        0,
+        maxRangeLen - bottomLabelValue.toString().length
+    );
 
     topSpaceCount += topLenDiff;
     bottomSpaceCount += bottomLenDiff;
 
-    const topLabelText = `${topValue}${tooltipTopTextSuffix}`;
-    const bottomLabelText = `${bottomValue}${tooltipBottomTextSuffix}`;
+    const topLabelText = `${topLabelValue}${tooltipTopTextSuffix}`;
+    const bottomLabelText = `${bottomLabelValue}${tooltipBottomTextSuffix}`;
 
     return {
         topLabelSpaceCount: topSpaceCount,
@@ -185,7 +199,6 @@ function getTooltipLabels(topValue = 0, bottomValue = 0, tooltipTopTextSuffix = 
         bottomLabelText,
     };
 }
-
 
 function ToolTip({
     text = '',
@@ -251,28 +264,34 @@ function VerticalRheostat({
     shouldShowMarkings = false,
     topLabel = React.Fragment,
     bottomLabel = React.Fragment,
-    onSliderMove = () => { },
-    onSliderRelease = () => { },
-    onSliderGrant = () => { },
+    onSliderMove = (panType?: string, updateValues?: { topValue: number; bottomValue: number; topOffset: any; bottomOffset: any; }, event?: GestureResponderEvent, gestureState?: PanResponderGestureState) => { },
+    onSliderRelease = (panType?: string, updateValues?: { topValue: number; bottomValue: number; topOffset: any; bottomOffset: any; }, event?: GestureResponderEvent, gestureState?: PanResponderGestureState) => { },
+    onSliderGrant = (panType?: React.SetStateAction<string>, event?: GestureResponderEvent, gestureState?: PanResponderGestureState) => { },
 }) {
     const sliderSize = CONSTANTS.SLIDER_SIZE;
     const rheostatSize = rheostatHeight - sliderSize;
     const animatedOffsetTop = useRef(new Animated.Value(0)).current;
     const animatedOffsetBottom = useRef(new Animated.Value(0)).current;
     const [currentTopValue, setCurrentTopValue] = useState(topHandleValue);
-    const [currentBottomValue, setCurrentBottomValue] = useState(bottomHandleValue);
+    const [currentBottomValue, setCurrentBottomValue] = useState(
+        bottomHandleValue
+    );
     const [filledBarHeight, setFilledBarHeight] = useState(0);
     const [activeHandle, setActiveHandle] = useState('top');
     const [isDragging, setIsDragging] = useState(false);
     const lastOffsetTop = useRef(0);
     const lastOffsetBottom = useRef(0);
 
-    const { snappingPoints, snappingPercentageArray } = useMemo(() => getSnappingPointsWithinRange(
-        snapPoints,
-        minRange,
-        maxRange,
-        algorithm
-    ), [algorithm, maxRange, minRange, snapPoints]);
+    const { snappingPoints, snappingPercentageArray } = useMemo(
+        () =>
+            getSnappingPointsWithinRange(
+                snapPoints,
+                minRange,
+                maxRange,
+                algorithm
+            ),
+        [algorithm, maxRange, minRange, snapPoints]
+    );
 
     const getValues = () => {
         const topOffset = animatedOffsetTop.__getValue();
@@ -283,14 +302,14 @@ function VerticalRheostat({
             bottomOffset
         );
 
-        let topValue = parseInt(
-            maxRange - (topFilledPercent * (maxRange - minRange)) / 100,
-            10
-        );
-        let bottomValue = parseInt(
-            minRange + (bottomFilledPercent * (maxRange - minRange)) / 100,
-            10
-        );
+        let topValue =
+            maxRange - (topFilledPercent * (maxRange - minRange)) / 100;
+        let bottomValue =
+            minRange + (bottomFilledPercent * (maxRange - minRange)) / 100;
+
+        topValue = Number(topValue.toFixed(0));
+        bottomValue = Number(bottomValue.toFixed(0));
+
         topValue = Math.min(Math.max(topValue, minRange), maxRange);
         bottomValue = Math.max(Math.min(bottomValue, maxRange), minRange);
 
@@ -354,7 +373,7 @@ function VerticalRheostat({
         );
     }, [topHandleValue]);
 
-    const getClampOffsetTop = offset => {
+    const getClampOffsetTop = (offset: any) => {
         const { bottomOffset } = getValues();
         const clampOffset = clampRange(
             offset,
@@ -364,7 +383,7 @@ function VerticalRheostat({
         return clampOffset;
     };
 
-    const getClampOffsetBottom = offset => {
+    const getClampOffsetBottom = (offset: number) => {
         const { topOffset } = getValues();
         const positiveOffset = Math.abs(offset);
         const maxDelta = rheostatSize - topOffset - sliderDelta;
@@ -372,7 +391,7 @@ function VerticalRheostat({
         return clampOffset;
     };
 
-    function onPanGrant(panType, event, gestureState) {
+    function onPanGrant(panType: React.SetStateAction<string>, event: GestureResponderEvent, gestureState: PanResponderGestureState) {
         setActiveHandle(panType);
         const { topOffset, bottomOffset } = getValues();
 
@@ -386,7 +405,7 @@ function VerticalRheostat({
         onSliderGrant && onSliderGrant(panType, event, gestureState);
     }
 
-    function onPanMove(panType, event, gestureState) {
+    function onPanMove(panType: string, event: GestureResponderEvent, gestureState: PanResponderGestureState) {
         let deltaTop;
         let deltaBottom;
         let clampOffsetTop = 0;
@@ -406,7 +425,6 @@ function VerticalRheostat({
 
         const values = getValues();
         const { topOffset, bottomOffset } = values;
-
 
         if (snap) {
             const topHandlePercentage = offsetToPercentage(
@@ -507,7 +525,7 @@ function VerticalRheostat({
         setIsDragging(true);
     }
 
-    function onPanEnd(panType, event, gestureState) {
+    function onPanEnd(panType: string, event: GestureResponderEvent, gestureState: PanResponderGestureState) {
         if (panType === 'top') {
             const clampOffset = getClampOffsetTop(
                 lastOffsetTop.current + gestureState.dy

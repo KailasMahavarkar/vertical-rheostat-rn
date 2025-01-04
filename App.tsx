@@ -1,11 +1,10 @@
 /* eslint-disable react-native/no-inline-styles */
 import React, { useState } from 'react';
 import { SafeAreaView, View, Text, Pressable } from 'react-native';
-import VerticalRheostat from './VerticalRheostat/VerticalRheostat';
-import { linearAlgorithm, log10Algorithm } from './VerticalRheostat/algorithm';
-import VerticalRheostat2 from './VerticalRheostat/VerticalRheostat2';
+import VerticalRheostat from './ui/VerticalRheostat/VerticalRheostat';
+import { log10Algorithm } from './ui/VerticalRheostat/algorithm';
 
-function Label({ text }) {
+function Label({ text }: { text: string }) {
     return <View style={{
         backgroundColor: 'blue',
         justifyContent: 'center',
@@ -16,8 +15,8 @@ function Label({ text }) {
 }
 
 function App(): React.JSX.Element {
-    const maxValue = 1000;
-    const minValue = 0;
+    const maxValue: number = 1000;
+    const minValue: number = 0;
 
     const [topValue, setTopValue] = useState(maxValue);
     const [bottomValue, setBottomValue] = useState(minValue);
@@ -40,7 +39,7 @@ function App(): React.JSX.Element {
                 borderStyle: 'solid',
             }}
         >
-            <VerticalRheostat2
+            <VerticalRheostat
                 handleSize={24}
                 handleDelta={10}
                 rheostatWidth={200}
@@ -56,8 +55,8 @@ function App(): React.JSX.Element {
                 topLabel={<Label text="Top Label" />}
                 bottomLabel={<Label text="Bottom Label" />}
 
-                showSnapLines={true}
-                snap={true}
+                showSnapLines={false}
+                snap={false}
                 shouldShowMarkings={true}
                 snapPoints={[minValue, 100, 200, 300, 400, 500, 600, 700, 800, maxValue]}
                 topHandleValue={topValue}
